@@ -1,0 +1,385 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>TriageIQ Live</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<style>
+  :root{
+    --bg:#0b1020; --panel:#111833; --panel2:#0f1630; --line:#1f2a55;
+    --text:#e2e8f0; --muted:#94a3b8; --accent:#6366f1; --cyan:#06b6d4;
+    --red:#f43f5e; --amber:#f59e0b; --green:#34d399;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--text);font-family:'Segoe UI',Arial,Helvetica,sans-serif;padding:20px;
+       background-image:radial-gradient(1200px 500px at 10% -10%,rgba(99,102,241,.18),transparent),radial-gradient(900px 400px at 100% 0%,rgba(6,182,212,.12),transparent)}
+  header{display:flex;align-items:center;gap:14px;flex-wrap:wrap;margin-bottom:14px}
+  header h1{margin:0;font-size:26px;font-weight:800;background:linear-gradient(90deg,#a5b4fc,#67e8f9);-webkit-background-clip:text;background-clip:text;color:transparent}
+  header .sub{color:var(--muted);font-size:13px}
+  .spacer{flex:1}
+  .pill{display:inline-flex;align-items:center;gap:8px;padding:6px 12px;border-radius:999px;font-size:12px;font-weight:700;letter-spacing:.04em;background:#1b2347;color:var(--muted);border:1px solid var(--line)}
+  .pill i{width:9px;height:9px;border-radius:50%;background:var(--muted);display:inline-block}
+  .pill.live{color:var(--green)} .pill.live i{background:var(--green);animation:blink 1.4s infinite}
+  .pill.demo{color:var(--amber)} .pill.demo i{background:var(--amber);animation:blink 1.4s infinite}
+  .pill.down{color:var(--red)} .pill.down i{background:var(--red)}
+  @keyframes blink{50%{opacity:.25}}
+  button{background:#1b2347;color:var(--text);border:1px solid var(--line);border-radius:10px;padding:7px 14px;font-size:13px;cursor:pointer}
+  button:hover{border-color:var(--accent)}
+  .banner{display:none;background:rgba(245,158,11,.12);border:1px solid rgba(245,158,11,.5);color:#fcd34d;border-radius:12px;padding:10px 14px;margin-bottom:14px;font-size:13px}
+  .panel{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:14px 16px}
+  .panel h3{margin:0 0 2px;font-size:14px;font-weight:700}
+  .panel .hint{margin:0 0 10px;color:var(--muted);font-size:12px}
+  .kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px;margin-bottom:14px}
+  .kpi .v{font-size:30px;font-weight:800;margin-top:4px}
+  .kpi .l{color:var(--muted);font-size:12px}
+  .pipeline{position:relative;display:flex;justify-content:space-between;gap:8px;padding:22px 14px;margin-bottom:14px;overflow:hidden}
+  .pipeline .line{position:absolute;left:10%;right:10%;top:50%;height:2px;background:repeating-linear-gradient(90deg,#334155 0 8px,transparent 8px 16px)}
+  .stage{position:relative;z-index:1;flex:1;max-width:200px;text-align:center;background:var(--panel2);border:1.5px solid #27325f;border-radius:14px;padding:12px 6px;transition:all .25s}
+  .stage .ico{font-size:22px}
+  .stage b{display:block;font-size:14px;margin-top:2px}
+  .stage small{display:block;color:var(--muted);font-size:11px;margin-top:2px}
+  .stage .m{display:block;color:var(--cyan);font-weight:700;font-size:13px;margin-top:6px;min-height:16px}
+  .stage.pulse{border-color:#67e8f9;box-shadow:0 0 18px rgba(103,232,249,.45);transform:translateY(-3px)}
+  .dot{position:absolute;top:calc(50% - 5px);left:10%;width:10px;height:10px;border-radius:50%;background:var(--red);box-shadow:0 0 10px var(--red);z-index:2;animation:travel 1.6s linear forwards}
+  @keyframes travel{to{left:90%}}
+  .grid{display:grid;grid-template-columns:repeat(12,1fr);gap:14px}
+  .s4{grid-column:span 4}.s5{grid-column:span 5}.s6{grid-column:span 6}.s7{grid-column:span 7}.s8{grid-column:span 8}.s12{grid-column:span 12}
+  .chart{position:relative;height:240px}
+  table{width:100%;border-collapse:collapse;font-size:13px}
+  th{color:var(--muted);font-weight:600;text-align:left;padding:6px 8px;border-bottom:1px solid var(--line);font-size:12px}
+  td{padding:7px 8px;border-bottom:1px solid rgba(31,42,85,.6);vertical-align:middle}
+  tr.new{animation:flash 1.4s ease-out}
+  @keyframes flash{from{background:rgba(103,232,249,.22)}to{background:transparent}}
+  .msg{max-width:420px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:#cbd5e1}
+  .badge{display:inline-block;padding:2px 8px;border-radius:999px;font-size:11px;font-weight:700;margin-right:4px}
+  .b-cat{background:rgba(99,102,241,.22);color:#c7d2fe}
+  .b-High{background:rgba(244,63,94,.2);color:#fda4af}
+  .b-Medium{background:rgba(245,158,11,.2);color:#fcd34d}
+  .b-Low{background:rgba(52,211,153,.18);color:#6ee7b7}
+  .b-human{background:var(--red);color:#fff}
+  .chip{display:inline-block;padding:1px 6px;border-radius:6px;font-size:11px;font-weight:700;margin-right:3px}
+  .chip.ok{background:rgba(52,211,153,.18);color:#6ee7b7}
+  .chip.bad{background:rgba(244,63,94,.2);color:#fda4af}
+  .cm td,.cm th{text-align:center;padding:6px 4px;font-size:12px}
+  .cm td.lab{text-align:left;color:var(--muted);font-weight:600}
+  footer{color:var(--muted);font-size:12px;margin-top:14px;text-align:center}
+  @media(max-width:900px){.s4,.s5,.s6,.s7,.s8{grid-column:span 12}.msg{max-width:160px}.stage small{display:none}}
+</style>
+</head>
+<body>
+
+<header>
+  <svg width="44" height="44" viewBox="0 0 256 256" aria-hidden="true">
+    <defs><linearGradient id="lg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#6366F1"/><stop offset="1" stop-color="#06B6D4"/></linearGradient></defs>
+    <rect width="256" height="256" rx="56" fill="url(#lg)"/>
+    <path d="M52 84 H204 a8 8 0 0 1 8 8 V114 a14 14 0 0 0 0 28 V164 a8 8 0 0 1 -8 8 H52 a8 8 0 0 1 -8 -8 V142 a14 14 0 0 0 0 -28 V92 a8 8 0 0 1 8 -8 Z" fill="#fff" fill-opacity=".96"/>
+    <polyline points="68,128 98,128 112,100 128,152 142,116 152,128 188,128" fill="none" stroke="#6366F1" stroke-width="8" stroke-linecap="round" stroke-linejoin="round"/>
+    <circle cx="208" cy="64" r="12" fill="#F43F5E"/>
+  </svg>
+  <div>
+    <h1>TriageIQ Live</h1>
+    <div class="sub">Real-time view of every ticket moving through the pipeline</div>
+  </div>
+  <div class="spacer"></div>
+  <span class="pill" id="status"><i></i><span id="statusText">CONNECTING</span></span>
+  <button id="pauseBtn">Pause</button>
+</header>
+
+<div class="banner" id="demoBanner">
+  <b>DEMO MODE.</b> These tickets and AI results are simulated so you can preview the dashboard. The numbers here are <b>not</b> real model accuracy.
+</div>
+
+<section class="kpis">
+  <div class="panel kpi"><div class="l">Tickets processed</div><div class="v" id="kTotal">0</div></div>
+  <div class="panel kpi"><div class="l">Tickets in last minute</div><div class="v" id="kRate">0</div></div>
+  <div class="panel kpi"><div class="l">Avg AI time per ticket</div><div class="v" id="kLat">–</div></div>
+  <div class="panel kpi"><div class="l">Category accuracy</div><div class="v" id="kCat">–</div></div>
+  <div class="panel kpi"><div class="l">Priority accuracy</div><div class="v" id="kPri">–</div></div>
+  <div class="panel kpi"><div class="l">Sent to a human</div><div class="v" id="kHuman">0</div></div>
+</section>
+
+<section class="panel pipeline" id="pipeline">
+  <div class="line"></div>
+  <div class="stage" id="st0"><div class="ico">📨</div><b>Producer</b><small>Python script</small><span class="m">&nbsp;</span></div>
+  <div class="stage" id="st1"><div class="ico">🚆</div><b>Kafka</b><small>topic: tickets</small><span class="m">&nbsp;</span></div>
+  <div class="stage" id="st2"><div class="ico">🧠</div><b>LLM Classifier</b><small>Ollama qwen2.5:3b</small><span class="m" id="m2">&nbsp;</span></div>
+  <div class="stage" id="st3"><div class="ico">🚆</div><b>Kafka</b><small>topic: tickets.triaged</small><span class="m" id="m3">&nbsp;</span></div>
+  <div class="stage" id="st4"><div class="ico">📊</div><b>This dashboard</b><small>live view</small><span class="m" id="m4">&nbsp;</span></div>
+</section>
+
+<section class="grid">
+  <div class="panel s8">
+    <h3>Tickets over time, by priority</h3>
+    <p class="hint">Each bar is 5 seconds. Red bars are tickets that need attention first.</p>
+    <div class="chart"><canvas id="chTime"></canvas></div>
+  </div>
+  <div class="panel s4">
+    <h3>What customers write about</h3>
+    <p class="hint">Category chosen by the AI.</p>
+    <div class="chart"><canvas id="chCat"></canvas></div>
+  </div>
+
+  <div class="panel s6">
+    <h3>How long the AI takes</h3>
+    <p class="hint">Seconds per ticket, last 40 tickets.</p>
+    <div class="chart"><canvas id="chLat"></canvas></div>
+  </div>
+  <div class="panel s6">
+    <h3>Is the AI getting it right?</h3>
+    <p class="hint">Rolling accuracy over the last 20 tickets, checked against the hidden answer key.</p>
+    <div class="chart"><canvas id="chAcc"></canvas></div>
+  </div>
+
+  <div class="panel s4">
+    <h3>Customer mood</h3>
+    <p class="hint">Mood detected by the AI.</p>
+    <div class="chart"><canvas id="chMood"></canvas></div>
+  </div>
+  <div class="panel s8">
+    <h3>Where does the AI get confused?</h3>
+    <p class="hint">Rows are the true category, columns are what the AI said. Green on the diagonal is correct. Red cells are mistakes.</p>
+    <div id="matrix"></div>
+  </div>
+
+  <div class="panel s12">
+    <h3>Live ticket feed</h3>
+    <p class="hint">Newest first. C = category, P = priority: a green tick means the AI matched the answer key.</p>
+    <table>
+      <thead><tr><th>Time</th><th>Ticket</th><th>Message</th><th>AI decision</th><th>Check</th><th>AI time</th></tr></thead>
+      <tbody id="feed"></tbody>
+    </table>
+  </div>
+</section>
+
+<footer>TriageIQ · Kafka → LLM classifier → this dashboard · data comes from the <code>tickets.triaged</code> topic</footer>
+
+<script>
+const CATS = ['Billing','Technical','Delivery','Account','General'];
+const CATS_ALL = [...CATS, 'Unknown'];
+const PRI = ['High','Medium','Low'];
+const MOODS = ['Angry','Frustrated','Neutral','Happy'];
+const MOOD_ICON = {Angry:'😡', Frustrated:'😤', Neutral:'😐', Happy:'😊'};
+const FEED_ROWS = 14;
+
+let events = [];
+let lastSeq = 0;
+let paused = false;
+let mode = 'live';
+
+const $ = id => document.getElementById(id);
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+
+/* ---------- charts ---------- */
+Chart.defaults.color = '#94a3b8';
+Chart.defaults.borderColor = 'rgba(148,163,184,0.12)';
+Chart.defaults.font.family = "'Segoe UI', Arial, sans-serif";
+const base = {responsive:true, maintainAspectRatio:false};
+const PRI_COL = {High:'#f43f5e', Medium:'#f59e0b', Low:'#34d399'};
+
+const chTime = new Chart($('chTime'), {type:'bar',
+  data:{labels:[], datasets:PRI.map(p => ({label:p, data:[], backgroundColor:PRI_COL[p], borderRadius:3}))},
+  options:{...base, scales:{x:{stacked:true, grid:{display:false}, ticks:{maxTicksLimit:7, maxRotation:0}}, y:{stacked:true, beginAtZero:true, ticks:{precision:0}}}, plugins:{legend:{position:'bottom'}}}});
+
+const chCat = new Chart($('chCat'), {type:'doughnut',
+  data:{labels:CATS_ALL, datasets:[{data:CATS_ALL.map(() => 0), backgroundColor:['#6366f1','#06b6d4','#f59e0b','#34d399','#a78bfa','#64748b'], borderWidth:0}]},
+  options:{...base, cutout:'62%', plugins:{legend:{position:'right'}}}});
+
+const chLat = new Chart($('chLat'), {type:'line',
+  data:{labels:[], datasets:[{label:'seconds', data:[], borderColor:'#06b6d4', backgroundColor:'rgba(6,182,212,.15)', fill:true, tension:.3, pointRadius:0, borderWidth:2}]},
+  options:{...base, scales:{x:{display:false}, y:{beginAtZero:true, title:{display:true, text:'seconds'}}}, plugins:{legend:{display:false}}}});
+
+const chAcc = new Chart($('chAcc'), {type:'line',
+  data:{labels:[], datasets:[
+    {label:'Category', data:[], borderColor:'#6366f1', tension:.3, pointRadius:0, borderWidth:2},
+    {label:'Priority', data:[], borderColor:'#f59e0b', tension:.3, pointRadius:0, borderWidth:2}]},
+  options:{...base, scales:{x:{display:false}, y:{min:0, max:100, title:{display:true, text:'% correct'}}}, plugins:{legend:{position:'bottom'}}}});
+
+const chMood = new Chart($('chMood'), {type:'bar',
+  data:{labels:MOODS.map(m => MOOD_ICON[m] + ' ' + m), datasets:[{data:MOODS.map(() => 0), backgroundColor:['#f43f5e','#f59e0b','#64748b','#34d399'], borderRadius:4}]},
+  options:{...base, indexAxis:'y', scales:{x:{beginAtZero:true, ticks:{precision:0}}, y:{grid:{display:false}}}, plugins:{legend:{display:false}}}});
+
+/* ---------- connection ---------- */
+function setStatus(kind, text){
+  const el = $('status');
+  el.className = 'pill ' + kind;
+  $('statusText').textContent = text;
+}
+function refreshStatus(){
+  if(mode === 'demo'){ setStatus('demo', 'DEMO'); }
+  else if(events.length === 0){ setStatus('live', 'LIVE · WAITING FOR TICKETS'); }
+  else { setStatus('live', 'LIVE'); }
+  $('demoBanner').style.display = mode === 'demo' ? 'block' : 'none';
+}
+
+const es = new EventSource('/events');
+es.addEventListener('init', e => {
+  const d = JSON.parse(e.data);
+  mode = d.mode;
+  events = []; lastSeq = 0;
+  $('feed').innerHTML = '';
+  d.events.forEach(addEvent);
+  events.slice(-FEED_ROWS).forEach(ev => addFeedRow(ev, false));
+  refreshStatus();
+  render(true);
+});
+es.addEventListener('ticket', e => {
+  const ev = JSON.parse(e.data);
+  if(addEvent(ev) && !paused){
+    addFeedRow(ev, true);
+    flow();
+    refreshStatus();
+  }
+});
+es.onerror = () => setStatus('down', 'DISCONNECTED · RETRYING');
+
+function addEvent(ev){
+  if(ev.seq <= lastSeq) return false;
+  lastSeq = ev.seq;
+  events.push(ev);
+  if(events.length > 5000) events.shift();
+  return true;
+}
+
+/* ---------- pipeline animation ---------- */
+function flow(){
+  const pipe = $('pipeline');
+  if(pipe.querySelectorAll('.dot').length > 10) return;
+  const dot = document.createElement('div');
+  dot.className = 'dot';
+  dot.addEventListener('animationend', () => dot.remove());
+  pipe.appendChild(dot);
+  for(let i = 0; i < 5; i++){
+    setTimeout(() => {
+      const st = $('st' + i);
+      st.classList.add('pulse');
+      setTimeout(() => st.classList.remove('pulse'), 280);
+    }, i * 400);
+  }
+}
+
+/* ---------- feed ---------- */
+function addFeedRow(ev, animate){
+  const tr = document.createElement('tr');
+  if(animate) tr.className = 'new';
+  const t = new Date(ev.ts * 1000).toLocaleTimeString();
+  let check = '<span style="color:#64748b">–</span>';
+  if(ev.truth){
+    const c = ev.ai.category === ev.truth.category;
+    const p = ev.ai.priority === ev.truth.priority;
+    check = `<span class="chip ${c?'ok':'bad'}">C ${c?'✓':'✗'}</span><span class="chip ${p?'ok':'bad'}">P ${p?'✓':'✗'}</span>`;
+  }
+  const human = ev.needs_human ? '<span class="badge b-human">HUMAN</span>' : '';
+  tr.innerHTML = `
+    <td>${esc(t)}</td>
+    <td><b>${esc(ev.id)}</b></td>
+    <td class="msg" title="${esc(ev.message)}">${esc(ev.message)}</td>
+    <td>${human}<span class="badge b-cat">${esc(ev.ai.category)}</span><span class="badge b-${esc(ev.ai.priority)}">${esc(ev.ai.priority)}</span>${MOOD_ICON[ev.ai.mood] || ''} ${esc(ev.ai.mood)}</td>
+    <td>${check}</td>
+    <td>${typeof ev.latency_s === 'number' ? ev.latency_s.toFixed(1) + 's' : '–'}</td>`;
+  const feed = $('feed');
+  feed.prepend(tr);
+  while(feed.children.length > FEED_ROWS) feed.removeChild(feed.lastChild);
+}
+
+/* ---------- charts + numbers (refreshed every second) ---------- */
+function render(force){
+  if(paused && !force) return;
+  const now = Date.now() / 1000;
+
+  // KPI cards
+  const total = events.length;
+  const lastMin = events.filter(e => e.ts > now - 60).length;
+  const lats = events.filter(e => typeof e.latency_s === 'number').slice(-50).map(e => e.latency_s);
+  const avgLat = lats.length ? lats.reduce((a,b) => a + b, 0) / lats.length : null;
+  const graded = events.filter(e => e.truth);
+  const catOk = graded.filter(e => e.ai.category === e.truth.category).length;
+  const priOk = graded.filter(e => e.ai.priority === e.truth.priority).length;
+  const human = events.filter(e => e.needs_human).length;
+  $('kTotal').textContent = total;
+  $('kRate').textContent = lastMin;
+  $('kLat').textContent = avgLat === null ? '–' : avgLat.toFixed(1) + 's';
+  $('kCat').textContent = graded.length ? Math.round(100 * catOk / graded.length) + '%' : '–';
+  $('kPri').textContent = graded.length ? Math.round(100 * priOk / graded.length) + '%' : '–';
+  $('kHuman').textContent = human;
+  $('m2').textContent = avgLat === null ? '\u00a0' : '~' + avgLat.toFixed(1) + 's / ticket';
+  $('m3').textContent = total + ' tickets';
+  $('m4').textContent = paused ? 'paused' : 'live';
+
+  // tickets over time (24 buckets x 5s)
+  const B = 24, W = 5;
+  const counts = PRI.map(() => Array(B).fill(0));
+  for(const e of events){
+    const age = now - e.ts;
+    if(age < 0 || age >= B * W) continue;
+    const idx = B - 1 - Math.floor(age / W);
+    const p = PRI.indexOf(e.ai.priority);
+    if(p >= 0) counts[p][idx]++;
+  }
+  chTime.data.labels = Array.from({length:B}, (_, i) => i === B - 1 ? 'now' : '-' + ((B - 1 - i) * W) + 's');
+  PRI.forEach((_, i) => chTime.data.datasets[i].data = counts[i]);
+  chTime.update('none');
+
+  // category doughnut
+  chCat.data.datasets[0].data = CATS_ALL.map(c => events.filter(e => e.ai.category === c).length);
+  chCat.update('none');
+
+  // mood bars
+  chMood.data.datasets[0].data = MOODS.map(m => events.filter(e => e.ai.mood === m).length);
+  chMood.update('none');
+
+  // latency line
+  const latEvents = events.filter(e => typeof e.latency_s === 'number').slice(-40);
+  chLat.data.labels = latEvents.map((_, i) => i + 1);
+  chLat.data.datasets[0].data = latEvents.map(e => e.latency_s);
+  chLat.update('none');
+
+  // rolling accuracy (window of 20)
+  const g = graded.slice(-80);
+  const catA = [], priA = [];
+  for(let i = 0; i < g.length; i++){
+    const w = g.slice(Math.max(0, i - 19), i + 1);
+    catA.push(100 * w.filter(e => e.ai.category === e.truth.category).length / w.length);
+    priA.push(100 * w.filter(e => e.ai.priority === e.truth.priority).length / w.length);
+  }
+  chAcc.data.labels = g.map((_, i) => i + 1);
+  chAcc.data.datasets[0].data = catA;
+  chAcc.data.datasets[1].data = priA;
+  chAcc.update('none');
+
+  // confusion matrix
+  const m = {};
+  CATS.forEach(t => { m[t] = {}; CATS_ALL.forEach(a => m[t][a] = 0); });
+  graded.forEach(e => { if(m[e.truth.category]) m[e.truth.category][e.ai.category] = (m[e.truth.category][e.ai.category] || 0) + 1; });
+  let html = '<table class="cm"><thead><tr><th>true ↓ / AI →</th>' + CATS_ALL.map(c => `<th>${c}</th>`).join('') + '</tr></thead><tbody>';
+  CATS.forEach(t => {
+    const rowTotal = CATS_ALL.reduce((s, a) => s + m[t][a], 0);
+    html += `<tr><td class="lab">${t}</td>`;
+    CATS_ALL.forEach(a => {
+      const n = m[t][a];
+      let bg = 'transparent';
+      if(n > 0 && rowTotal > 0){
+        const alpha = (0.15 + 0.7 * n / rowTotal).toFixed(2);
+        bg = t === a ? `rgba(52,211,153,${alpha})` : `rgba(244,63,94,${alpha})`;
+      }
+      html += `<td style="background:${bg}">${n || ''}</td>`;
+    });
+    html += '</tr>';
+  });
+  $('matrix').innerHTML = html + '</tbody></table>';
+}
+
+setInterval(render, 1000);
+
+$('pauseBtn').addEventListener('click', () => {
+  paused = !paused;
+  $('pauseBtn').textContent = paused ? 'Resume' : 'Pause';
+  if(!paused){
+    $('feed').innerHTML = '';
+    events.slice(-FEED_ROWS).forEach(ev => addFeedRow(ev, false));
+    render(true);
+  }
+});
+</script>
+</body>
+</html> 
