@@ -1,24 +1,30 @@
 """
-TriageIQ - Step 3b: Kafka consumer that classifies live tickets.
+TriageIQ - Step 4b: Kafka consumer that classifies tickets AND drafts replies.
 
-Flow:  Kafka topic "tickets"  ->  LLM classifier  ->  Kafka topic "tickets.triaged"
+Flow:  Kafka "tickets"  ->  LLM classifier  ->  RAG reply drafter  ->  Kafka "tickets.triaged"
 
 For every ticket it prints the AI's answer next to the hidden answer key
-(the "label" the producer attached), so you can see how accurate the AI is.
-It also measures how long the AI took (latency) for the live dashboard.
+(the "label" the producer attached), plus the suggested reply.
 
 Run:
-    python classifier/consumer.py              # classify 10 tickets then stop
-    python classifier/consumer.py --max 50     # classify 50 tickets
+    python classifier/consumer.py                  # 10 tickets, with replies
+    python classifier/consumer.py --max 5          # 5 tickets
+    python classifier/consumer.py --max 100 --no-reply   # faster: classify only
 """
 
 import argparse
 import json
+import sys
 import time
+from pathlib import Path
 
 from confluent_kafka import Consumer, Producer
 
 from classifier import classify_ticket
+
+# let this file import the reply drafter that lives in the rag/ folder
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "rag"))
+from drafter import draft_reply  # noqa: E402
 
 BOOTSTRAP_SERVERS = "localhost:9092"
 INPUT_TOPIC = "tickets"
@@ -27,8 +33,9 @@ GROUP_ID = "triageiq-classifier"
 
 
 def main():
-    parser = argparse.ArgumentParser(description="Classify tickets from Kafka")
+    parser = argparse.ArgumentParser(description="Classify tickets from Kafka and draft replies")
     parser.add_argument("--max", type=int, default=10, help="stop after this many tickets")
+    parser.add_argument("--no-reply", action="store_true", help="skip reply drafting (faster)")
     args = parser.parse_args()
 
     consumer = Consumer({
@@ -39,7 +46,7 @@ def main():
     producer = Producer({"bootstrap.servers": BOOTSTRAP_SERVERS})
     consumer.subscribe([INPUT_TOPIC])
 
-    print(f"Waiting for tickets on '{INPUT_TOPIC}' (will classify {args.max}) ... Ctrl+C to stop\n")
+    print(f"Waiting for tickets on '{INPUT_TOPIC}' (will process {args.max}) ... Ctrl+C to stop\n")
 
     done = category_ok = priority_ok = 0
     try:
@@ -58,9 +65,10 @@ def main():
                 print("Skipped a message that is not a valid ticket")
                 continue
 
+            # --- step 1: classify ---
             start = time.time()
             triage = classify_ticket(text)
-            triage["latency_s"] = round(time.time() - start, 2)  # NEW: how long the AI took
+            triage["latency_s"] = round(time.time() - start, 2)
 
             truth = ticket.get("label", {})
             cat_match = triage["category"] == truth.get("category")
@@ -78,6 +86,20 @@ def main():
                 + (" | NEEDS HUMAN" if triage.get("needs_human") else "")
             )
 
+            # --- step 2: draft a reply from similar past tickets (RAG) ---
+            if not args.no_reply:
+                draft_start = time.time()
+                draft = draft_reply(text)
+                triage["draft_latency_s"] = round(time.time() - draft_start, 2)
+                triage["reply"] = draft["reply"]
+                triage["reply_sources"] = draft["sources"]
+                triage["reply_error"] = draft["error"]
+                if draft["reply"]:
+                    indented = draft["reply"].replace("\n", "\n      ")
+                    print(f"   Suggested reply ({triage['draft_latency_s']}s): {indented}")
+                else:
+                    print(f"   No draft: {draft['error']}")
+
             ticket["triage"] = triage
             producer.produce(OUTPUT_TOPIC, key=str(ticket.get("ticket_id")), value=json.dumps(ticket))
             producer.poll(0)
@@ -87,7 +109,7 @@ def main():
         producer.flush()
         consumer.close()
         if done:
-            print(f"\nClassified {done} tickets")
+            print(f"\nProcessed {done} tickets")
             print(f"Category accuracy: {category_ok}/{done} ({100 * category_ok / done:.0f}%)")
             print(f"Priority accuracy: {priority_ok}/{done} ({100 * priority_ok / done:.0f}%)")
 
