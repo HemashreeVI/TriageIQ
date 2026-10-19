@@ -3,149 +3,206 @@
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/status-in%20development-orange" alt="status"/>
+  <img src="https://img.shields.io/badge/status-working%20end%20to%20end-2E9B63" alt="status"/>
   <img src="https://img.shields.io/badge/Kafka-streaming-231F20?logo=apachekafka&logoColor=white" alt="Kafka"/>
   <img src="https://img.shields.io/badge/FastAPI-backend-009688?logo=fastapi&logoColor=white" alt="FastAPI"/>
+  <img src="https://img.shields.io/badge/Ollama-local%20LLM-000000" alt="Ollama"/>
+  <img src="https://img.shields.io/badge/Qdrant-RAG-DC244C" alt="Qdrant"/>
   <img src="https://img.shields.io/badge/Docker-containerized-2496ED?logo=docker&logoColor=white" alt="Docker"/>
-  <img src="https://img.shields.io/badge/LLM-RAG-6366F1" alt="LLM RAG"/>
 </p>
 
 # TriageIQ
 
-**TriageIQ is a real-time system that reads incoming customer support tickets, decides how urgent they are, routes them to the right team, and drafts a reply using the company's past resolved tickets, so human agents only review and send.**
+**TriageIQ reads customer support emails as they arrive, works out how urgent each one is, drafts a reply from the company's past resolved tickets, and asks a human agent to approve it. Only after approval is the reply emailed back to the customer.**
 
-> Built as a portfolio project using the same kind of stack real companies run: streaming (Kafka), LLMs with retrieval (RAG), APIs (FastAPI), containers (Docker) and LLM monitoring (Langfuse).
+It runs fully on a laptop: the language model is local (Ollama), so no customer text is sent to an AI vendor.
 
 ---
 
 ## The problem
 
-Support teams at companies like banks, delivery apps and SaaS products receive thousands of messages every hour, for example:
+Support teams receive thousands of messages an hour, for example:
 
 > *"I was charged twice for my subscription and I need a refund today!!"*
 
-A human has to read each one, work out the category, urgency and team, and then write a reply. This is slow and expensive, and urgent tickets get buried in the queue.
-
-**TriageIQ does the first 80% of that work automatically, in seconds.**
+Someone has to read each one, decide the category and urgency, and write a reply. It is slow, and urgent tickets get buried. TriageIQ does the first 80% of that work in seconds and keeps a person in charge of what is actually sent.
 
 ---
 
-## What is a ticket?
+## What it does
 
-A **ticket** is one customer problem, recorded and tracked by a company's support software (Zendesk, Freshdesk, Zoho Desk and similar).
+1. **Customer emails the support inbox.** A gateway reads the Gmail inbox and turns each new email into a ticket.
+2. **Kafka queues the ticket,** so a burst of emails waits in line instead of crashing anything.
+3. **A local LLM classifies it:** category (Billing, Technical, Delivery, Account, General), priority (High, Medium, Low) and customer mood.
+4. **RAG finds similar solved tickets** in a Qdrant vector database (matching by meaning, so "charged twice" finds "duplicate payment").
+5. **The LLM drafts a reply** grounded in those past answers.
+6. **The employee is alerted** by email and by a phone push notification.
+7. **The agent reviews the draft in the console,** edits it, and approves.
+8. **Only then is the reply emailed to the customer,** in the same email thread.
 
-| Field | Example |
-|---|---|
-| Ticket ID | `TKT-10482` |
-| Message | "I was charged twice for my subscription, need a refund today!!" |
-| Channel | Email, chat or app |
-| Status | Open, In progress, Closed |
-
-TriageIQ adds three things to every ticket: **category, priority and a suggested reply**.
+If the model fails or returns something invalid, the ticket goes to a human instead of getting lost.
 
 ---
 
-## Process flow
+## Architecture
 
 ```mermaid
 flowchart LR
-    A[Customer ticket] --> B[(Kafka topic: tickets)]
-    B --> C[LLM classifier]
-    C --> D{Valid output?}
-    D -- yes --> E[RAG search over past tickets]
-    D -- no --> H[Human queue]
-    E --> F[Draft reply]
-    F --> G[Agent dashboard]
-    C -.-> L[Langfuse monitoring]
-    E -.-> L
+    C[Customer email] --> G[Email gateway<br/>IMAP]
+    G --> K1[(Kafka: tickets)]
+    K1 --> L[LLM classifier<br/>Ollama qwen2.5:3b]
+    L --> R[RAG search<br/>Qdrant + nomic-embed-text]
+    R --> D[Draft reply]
+    D --> K2[(Kafka: tickets.triaged)]
+    K2 --> S[FastAPI console<br/>live updates, SQLite]
+    S --> N[Employee alert<br/>email + ntfy push]
+    S --> A{Agent approves?}
+    A -- yes --> M[Reply emailed to customer<br/>SMTP]
+    A -- send to human --> H[Manual handling]
 ```
 
 <p align="center">
   <img src="architecture.svg" alt="TriageIQ architecture" width="100%"/>
 </p>
 
-### Step by step, what happens to one ticket
+---
 
-1. **Ticket arrives.** A producer script replays tickets from a public dataset, acting like a live customer stream.
-2. **Kafka holds it.** Kafka is a conveyor belt: if 10,000 tickets arrive at once they wait in line instead of crashing the system.
-3. **LLM classifies it.** The model returns structured output: category, priority and customer mood (for example `Billing | High | Angry`).
-4. **RAG finds similar past tickets.** A vector database searches by meaning, so "charged twice" matches "duplicate payment".
-5. **LLM drafts a reply** grounded in those real past answers, not invented.
-6. **Agent dashboard** shows the ticket, priority, routing and suggested reply. The agent edits or approves.
-7. **Safe failure.** If the LLM fails or returns invalid output, the ticket goes to a human queue instead of getting lost.
-8. **Langfuse records every LLM call** (input, output, latency, cost) so quality can be measured.
+## The agent console
+
+A web console for the support team: sign-in, light and dark themes, and a layout that works on a phone.
+
+| Tab | Purpose |
+|---|---|
+| Overview | How many tickets are waiting, split by priority with the oldest wait, plus the tickets that need attention first |
+| Needs approval | The queue of AI drafts waiting for a human |
+| Urgent | High-priority tickets and tickets the AI could not handle |
+| All tickets | Everything, searchable |
+| Analytics | Volume, topics, AI response time, accuracy and a confusion matrix |
+| System | How a ticket travels, connection status, and phone setup |
+
+Keyboard shortcuts: `J` and `K` move through the list, `Ctrl+Enter` sends, `/` searches.
+
+> Screenshots go here: add `docs/overview.png`, `docs/review.png` and `docs/mobile.png`.
+
+### Using it from a phone
+
+The console can be opened from anywhere through a free **Cloudflare quick tunnel**, protected by a login. **ntfy** sends a push notification to the phone when a new email ticket arrives. The notification carries only the ticket number, category and priority, never the customer's message.
+
+---
+
+## Safety design
+
+- **Nothing reaches a customer without human approval.** The console asks for confirmation before sending, and a sent reply cannot be edited or sent twice.
+- **Email loop protection:** auto-replies, bounces, mailing lists, `no-reply` senders and the company's own address are ignored.
+- **No duplicates:** emails are de-duplicated by Message-ID, and an email is marked read only after Kafka has confirmed the ticket.
+- **Rate limit per sender** to stop one address from flooding the queue.
+- **Login:** signed, HttpOnly session cookie, a lockout after repeated wrong passwords, same-origin checks on every change, and strict security headers.
+- **Secrets stay local:** `.env` is git-ignored, and the app creates the dashboard password and alert topic on first run.
 
 ---
 
 ## Tech stack
 
-| Tool | Role in TriageIQ |
+| Tool | Role |
 |---|---|
 | Apache Kafka | Streams tickets between services |
-| LLM (classifier + reply drafting) | Category, priority, mood, suggested reply |
-| Vector DB (Qdrant or pgvector) | Semantic search over past resolved tickets |
-| LangChain or LlamaIndex | RAG pipeline |
-| FastAPI | API layer for the dashboard |
-| Docker / Docker Compose | One-command startup |
-| Langfuse | LLM tracing, evaluation and cost tracking |
-| GitHub Actions | CI: automatic tests on every push |
+| Ollama (`qwen2.5:3b`) | Local LLM for classification and reply drafting |
+| Qdrant + `nomic-embed-text` | Semantic search over past resolved tickets |
+| FastAPI + Server-Sent Events | Console backend with live updates |
+| SQLite | Agent decisions and email-gateway state |
+| Gmail IMAP / SMTP | Receiving and sending real email |
+| Cloudflare Tunnel, ntfy | Phone access and push notifications |
+| Chart.js | Analytics charts |
+| Docker Compose | Kafka and Qdrant in one command |
+
+---
+
+## Project layout
+
+```
+TriageIQ/
+  docker-compose.yml        Kafka and Qdrant
+  producer/                 generates fake tickets for testing
+  gateway/                  email in and out, settings, phone alerts
+  classifier/               LLM classifier and the Kafka consumer
+  rag/                      past tickets, Qdrant search, reply drafting
+  dashboard/                FastAPI server, sign-in, console and app files
+  .env.example              settings template (copy to .env)
+```
+
+---
+
+## Quick start
+
+**Requirements:** Docker Desktop, Python 3.11 or newer, [Ollama](https://ollama.com), and a Gmail account made just for the support inbox (with 2-Step Verification and an [app password](https://myaccount.google.com/apppasswords)).
+
+```bash
+# 1. install and start the services
+python -m venv .venv
+.venv\Scripts\activate            # Windows (on macOS/Linux: source .venv/bin/activate)
+pip install -r requirements.txt
+docker compose up -d
+
+# 2. pull the local models
+ollama pull qwen2.5:3b
+ollama pull nomic-embed-text
+
+# 3. create the Kafka topics (once)
+docker exec kafka /opt/kafka/bin/kafka-topics.sh --create --topic tickets --bootstrap-server localhost:9092
+docker exec kafka /opt/kafka/bin/kafka-topics.sh --create --topic tickets.triaged --bootstrap-server localhost:9092
+
+# 4. load past tickets into the vector database (once)
+python rag/ingest.py
+
+# 5. settings
+copy .env.example .env            # then fill in SUPPORT_EMAIL, SUPPORT_APP_PASSWORD, AGENT_EMAIL
+python gateway/inbound.py --check # tests the Gmail login, sending and Kafka
+```
+
+Run each of these in its own terminal:
+
+```bash
+python gateway/inbound.py                       # turns new emails into tickets
+python classifier/consumer.py --max 0           # classifies and drafts replies
+python dashboard/server.py                      # the console at http://localhost:8050
+```
+
+The first start of the console prints a username and password and saves them in `.env`.
+
+**Phone access:** install [`cloudflared`](https://developers.cloudflare.com/cloudflare-one/connections/connect-networks/downloads/) and the ntfy app, then start the console with:
+
+```bash
+python dashboard/server.py --share
+```
+
+It prints a secure `https://...trycloudflare.com` link. The address changes on every start, and it works only while your computer and TriageIQ are running.
+
+**Try it without email or an LLM:** `python dashboard/server.py --demo` shows the console with simulated tickets. Demo data is fake, and nothing is ever sent.
+
+---
+
+## Honest limits
+
+- The past-ticket knowledge base is **synthetic** (hand-written examples), so draft quality on real company data is untested.
+- Accuracy numbers are **not measured yet.** The accuracy charts only use generated test tickets that come with an answer key.
+- The phone link depends on a laptop staying on. A production setup would deploy the services to a server.
+- It uses a small 3B-parameter local model, so it is fast and private but less accurate than a large hosted model.
 
 ---
 
 ## Roadmap
 
-- [x] **Step 1:** Kafka running in Docker, test ticket sent and received
-- [ ] **Step 2:** Python producer that streams realistic fake tickets into Kafka
-- [ ] **Step 3:** LLM classifier (category, priority, mood) with safe fallback
-- [ ] **Step 4:** Vector DB + RAG over past resolved tickets, suggested replies
-- [ ] **Step 5:** FastAPI layer and agent dashboard
-- [ ] **Step 6:** Langfuse monitoring and accuracy evaluation on a labeled set
-- [ ] **Step 7:** CI/CD with GitHub Actions, final README with measured results
+- [x] Kafka in Docker, ticket producer
+- [x] LLM classifier (category, priority, mood) with safe fallback
+- [x] RAG over past tickets and drafted replies
+- [x] Agent console with live updates and approval
+- [x] Real email in and out, with approval before sending
+- [x] Employee alerts by email and phone push
+- [x] Sign-in, themes, mobile layout, phone access
+- [ ] Accuracy evaluation on 100+ labelled tickets, with prompt tuning
+- [ ] Langfuse monitoring of LLM latency and errors
+- [ ] Larger, more realistic knowledge base
+- [ ] CI with GitHub Actions
+- [ ] Measured results, screenshots and demo video in this README
 
-Results (accuracy, latency, cost per ticket) will be added here once Steps 3 to 6 are done.
-
----
-
-## Quick start (current state: Step 1)
-
-**Requirements:** Docker Desktop running.
-
-```bash
-# start Kafka
-docker compose up -d
-
-# create the tickets topic
-docker exec kafka /opt/kafka/bin/kafka-topics.sh --create --topic tickets --bootstrap-server localhost:9092
-```
-
-Expected output: `Created topic tickets.`
-
-Send and read a test ticket (two terminals):
-
-```bash
-# Terminal A: consumer
-docker exec -it kafka /opt/kafka/bin/kafka-console-consumer.sh --topic tickets --bootstrap-server localhost:9092 --from-beginning
-
-# Terminal B: producer (type a message and press Enter)
-docker exec -it kafka /opt/kafka/bin/kafka-console-producer.sh --topic tickets --bootstrap-server localhost:9092
-```
-
----
-
-## Project structure
-
-```
-TriageIQ/
-├── docker-compose.yml   # Kafka (more services added step by step)
-├── README.md
-├── banner.svg           # animated header
-├── logo.svg             # app icon
-├── architecture.svg     # animated flow diagram
-└── .gitignore
-```
-
----
-
-## Author
-
-**Hemashree V I**, B.Tech CSE (Cyber Physical Systems), VIT Chennai
+Measured accuracy, latency and cost per ticket will be added here once the evaluation is done.
