@@ -1,0 +1,231 @@
+<!doctype html>
+<html lang="en" data-theme="light">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0F2A30">
+<title>Sign in · TriageIQ</title>
+<link rel="icon" type="image/svg+xml" href="/static/favicon.svg">
+<link rel="manifest" href="/manifest.webmanifest">
+<link rel="apple-touch-icon" href="/static/apple-touch-icon.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<script>
+(function(){var p='system';try{p=localStorage.getItem('triageiq-theme')||'system'}catch(e){}
+var d=p==='dark'||(p==='system'&&window.matchMedia&&matchMedia('(prefers-color-scheme: dark)').matches);
+document.documentElement.dataset.theme=d?'dark':'light';document.documentElement.dataset.pref=p;})();
+</script>
+<style>
+  :root{
+    --paper:#F1F4F4; --surface:#FFFFFF; --line:#D5DEDE; --ink:#14292E; --muted:#587074;
+    --brand:#0B7A75; --brand-strong:#086561; --on-brand:#FFFFFF; --focus:#0B7A75;
+    --bad:#B42B25; --bad-bg:#FCE9E7; --field:#FFFFFF;
+  }
+  :root[data-theme="dark"]{
+    --paper:#0A1417; --surface:#0F1D21; --line:#24393E; --ink:#E4EEEE; --muted:#93AAAD;
+    --brand:#35B3AC; --brand-strong:#5CCBC4; --on-brand:#06201F; --focus:#5CCBC4;
+    --bad:#FF8F86; --bad-bg:#35191A; --field:#0A1417;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;min-height:100%}
+  body{background:var(--paper);color:var(--ink);font:15px/1.55 'Instrument Sans',system-ui,-apple-system,'Segoe UI',Roboto,Arial,sans-serif;-webkit-font-smoothing:antialiased}
+  button,input{font:inherit;color:inherit}
+  svg.i{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;flex:none}
+  :focus-visible{outline:2px solid var(--focus);outline-offset:2px}
+
+  .page{display:grid;grid-template-columns:minmax(0,1.08fr) minmax(0,.92fr);min-height:100vh}
+
+  /* ---- brand side ---- */
+  .story{position:relative;background:#0F2A30;color:#E9F3F3;padding:40px 56px 36px;display:flex;flex-direction:column;overflow:hidden}
+  .story::before{content:"";position:absolute;inset:0;background:
+      radial-gradient(520px 320px at 100% 0%,rgba(53,179,172,.20),transparent 70%),
+      radial-gradient(460px 300px at 0% 100%,rgba(11,122,117,.28),transparent 70%);pointer-events:none}
+  .story>*{position:relative}
+  .brand{display:flex;align-items:center;gap:12px;font-weight:700;font-size:19px;letter-spacing:-.01em;color:#fff;text-decoration:none}
+  .brand img{width:34px;height:34px;border-radius:9px;display:block}
+  .pitch{margin-top:auto;padding-top:36px;max-width:560px}
+  .pitch h1{margin:0;font-size:41px;line-height:1.1;letter-spacing:-.025em;font-weight:700;color:#fff;text-wrap:balance}
+  .pitch p.lead{margin:16px 0 0;font-size:17px;line-height:1.55;color:#B7CDCE;max-width:46ch}
+  .art{margin:34px 0 8px;max-width:560px}
+  .art svg{display:block;width:100%;height:auto}
+  .points{list-style:none;margin:0;padding:0;display:grid;gap:10px;color:#CFE0E1;font-size:15px}
+  .points li{display:flex;gap:10px;align-items:flex-start}
+  .points .i{margin-top:3px;color:#5CCBC4;width:17px;height:17px}
+  .stack{margin-top:26px;color:#7F9C9E;font-size:13.5px}
+
+  /* ---- form side ---- */
+  .gate{display:flex;flex-direction:column;padding:28px 40px}
+  .gate-top{display:flex;justify-content:flex-end}
+  .theme{display:inline-flex;gap:2px;padding:3px;border-radius:10px;background:color-mix(in srgb,var(--ink) 7%,transparent)}
+  .theme button{border:0;background:none;width:32px;height:30px;border-radius:8px;display:grid;place-items:center;color:var(--muted);cursor:pointer}
+  .theme button[aria-pressed="true"]{background:var(--surface);color:var(--ink);box-shadow:0 1px 2px rgba(0,0,0,.12)}
+  .form-wrap{margin:auto;width:100%;max-width:392px;padding:24px 0 40px}
+  .form-wrap h2{margin:0;font-size:28px;line-height:1.2;letter-spacing:-.02em;font-weight:700}
+  .form-wrap .sub{margin:8px 0 28px;color:var(--muted)}
+  label{display:block;font-weight:600;font-size:14px;margin-bottom:6px}
+  .field{margin-bottom:18px}
+  .control{position:relative}
+  input{width:100%;height:46px;padding:0 14px;border:1px solid var(--line);border-radius:10px;background:var(--field);outline:none;transition:border-color .12s,box-shadow .12s}
+  input:hover{border-color:color-mix(in srgb,var(--ink) 30%,var(--line))}
+  input:focus{border-color:var(--brand);box-shadow:0 0 0 3px color-mix(in srgb,var(--brand) 22%,transparent)}
+  input[type="password"],input.shown{padding-right:76px}
+  .reveal{position:absolute;right:6px;top:6px;height:34px;padding:0 10px;border:0;border-radius:8px;background:none;color:var(--brand-strong);font-weight:600;font-size:13.5px;cursor:pointer}
+  .reveal:hover{background:color-mix(in srgb,var(--brand) 10%,transparent)}
+  .submit{width:100%;height:48px;border:0;border-radius:10px;background:var(--brand);color:var(--on-brand);font-weight:650;font-size:15.5px;cursor:pointer;transition:background .12s,transform .05s}
+  .submit:hover{background:var(--brand-strong)}
+  .submit:active{transform:translateY(1px)}
+  .submit:disabled{opacity:.7;cursor:progress}
+  .error{display:none;margin:0 0 18px;padding:10px 12px;border-radius:10px;background:var(--bad-bg);color:var(--bad);font-size:14px;line-height:1.45}
+  .error.show{display:block}
+  .note{margin:18px 0 0;color:var(--muted);font-size:13.5px}
+
+  @media (max-width:900px){
+    .page{grid-template-columns:1fr}
+    .story{padding:22px 22px 24px}
+    .pitch{padding-top:20px}
+    .pitch h1{font-size:27px}
+    .pitch p.lead,.art,.points,.stack{display:none}
+    .gate{padding:18px 22px 28px}
+    .form-wrap{margin:8px auto auto}
+  }
+  @media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+</head>
+<body>
+<div class="page">
+  <section class="story">
+    <a class="brand" href="/"><img src="/static/favicon.svg" alt="" width="34" height="34">TriageIQ</a>
+    <div class="pitch">
+      <h1>Every customer email, ranked by urgency, with a reply ready to approve.</h1>
+      <p class="lead">TriageIQ reads your support inbox, decides what needs attention first, and drafts an answer from tickets you have already solved.</p>
+    </div>
+    <div class="art" aria-hidden="true">
+      <svg viewBox="0 0 560 300" role="img" aria-label="Emails sorted into urgent, soon and routine lanes">
+        <g>
+          <rect x="34" y="96" width="112" height="78" rx="10" fill="#fff" opacity=".3"/>
+          <rect x="26" y="106" width="112" height="78" rx="10" fill="#fff" opacity=".6"/>
+          <rect x="18" y="116" width="112" height="78" rx="10" fill="#F4F8F8"/>
+          <path d="M18 126l56 38 56-38" fill="none" stroke="#0F2A30" stroke-opacity=".28" stroke-width="2.5" stroke-linejoin="round"/>
+        </g>
+        <circle cx="198" cy="155" r="30" fill="#35B3AC"/>
+        <path d="M198 137l4.6 11.4L214 153l-11.4 4.6L198 169l-4.6-11.4L182 153l11.4-4.6z" fill="#0F2A30"/>
+        <g fill="none" stroke="#fff" stroke-opacity=".4" stroke-width="2" stroke-dasharray="3 7" stroke-linecap="round">
+          <path d="M132 155H164"/><path d="M230 155C266 155 262 70 300 70"/><path d="M230 155H300"/><path d="M230 155C266 155 262 240 300 240"/>
+        </g>
+        <g stroke="#fff" stroke-opacity=".2" stroke-width="2"><path d="M300 70H548"/><path d="M300 155H548"/><path d="M300 240H548"/></g>
+        <g fill="#fff" fill-opacity=".72" font-size="12.5" font-family="inherit">
+          <text x="300" y="40">Urgent</text><text x="300" y="125">Soon</text><text x="300" y="210">Routine</text>
+          <text x="198" y="206" text-anchor="middle">AI sorts</text><text x="74" y="214" text-anchor="middle">Inbox</text>
+        </g>
+        <g>
+          <rect x="318" y="50" width="100" height="48" rx="9" fill="#fff"/><circle cx="336" cy="74" r="6" fill="#D6372F"/><rect x="350" y="65" width="52" height="5" rx="2.5" fill="#0F2A30" opacity=".75"/><rect x="350" y="77" width="36" height="5" rx="2.5" fill="#0F2A30" opacity=".25"/>
+          <rect x="432" y="50" width="100" height="48" rx="9" fill="#fff" opacity=".85"/><circle cx="450" cy="74" r="6" fill="#D6372F"/><rect x="464" y="65" width="44" height="5" rx="2.5" fill="#0F2A30" opacity=".6"/><rect x="464" y="77" width="28" height="5" rx="2.5" fill="#0F2A30" opacity=".25"/>
+          <rect x="318" y="135" width="100" height="48" rx="9" fill="#fff"/><circle cx="336" cy="159" r="6" fill="#E39B1B"/><rect x="350" y="150" width="46" height="5" rx="2.5" fill="#0F2A30" opacity=".75"/><rect x="350" y="162" width="32" height="5" rx="2.5" fill="#0F2A30" opacity=".25"/>
+          <rect x="432" y="135" width="100" height="48" rx="9" fill="#fff" opacity=".85"/><circle cx="450" cy="159" r="6" fill="#E39B1B"/><rect x="464" y="150" width="40" height="5" rx="2.5" fill="#0F2A30" opacity=".6"/><rect x="464" y="162" width="24" height="5" rx="2.5" fill="#0F2A30" opacity=".25"/>
+          <rect x="318" y="220" width="100" height="48" rx="9" fill="#fff"/><circle cx="336" cy="244" r="6" fill="#2E9B63"/><rect x="350" y="235" width="48" height="5" rx="2.5" fill="#0F2A30" opacity=".75"/><rect x="350" y="247" width="30" height="5" rx="2.5" fill="#0F2A30" opacity=".25"/>
+          <rect x="432" y="220" width="100" height="48" rx="9" fill="#fff" opacity=".85"/><circle cx="450" cy="244" r="6" fill="#2E9B63"/><rect x="464" y="235" width="42" height="5" rx="2.5" fill="#0F2A30" opacity=".6"/><rect x="464" y="247" width="26" height="5" rx="2.5" fill="#0F2A30" opacity=".25"/>
+        </g>
+      </svg>
+    </div>
+    <ul class="points">
+      <li><svg class="i"><use href="#i-check"/></svg>Ranks every email by urgency and customer mood</li>
+      <li><svg class="i"><use href="#i-check"/></svg>Drafts the reply from your past resolved tickets</li>
+      <li><svg class="i"><use href="#i-check"/></svg>Sends nothing until a person approves it</li>
+    </ul>
+    <div class="stack">Runs on Kafka, Qdrant and a local language model.</div>
+  </section>
+
+  <section class="gate">
+    <div class="gate-top">
+      <div class="theme" role="group" aria-label="Colour theme">
+        <button type="button" data-pref="light" aria-label="Light theme" aria-pressed="false"><svg class="i"><use href="#i-sun"/></svg></button>
+        <button type="button" data-pref="system" aria-label="Match device theme" aria-pressed="false"><svg class="i"><use href="#i-monitor"/></svg></button>
+        <button type="button" data-pref="dark" aria-label="Dark theme" aria-pressed="false"><svg class="i"><use href="#i-moon"/></svg></button>
+      </div>
+    </div>
+    <div class="form-wrap">
+      <h2>Sign in</h2>
+      <p class="sub">Use the account for this support workspace.</p>
+      <form id="form" novalidate>
+        <div class="error" id="error" role="alert"></div>
+        <div class="field">
+          <label for="user">Username</label>
+          <input id="user" name="username" autocomplete="username" autocapitalize="none" spellcheck="false" required>
+        </div>
+        <div class="field">
+          <label for="password">Password</label>
+          <div class="control">
+            <input id="password" name="password" type="password" autocomplete="current-password" required>
+            <button type="button" class="reveal" id="reveal" aria-controls="password">Show</button>
+          </div>
+        </div>
+        <button class="submit" id="submit" type="submit">Sign in</button>
+        <p class="note">You stay signed in on this device for 14 days.</p>
+      </form>
+    </div>
+  </section>
+</div>
+
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <symbol id="i-check" viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></symbol>
+  <symbol id="i-sun" viewBox="0 0 24 24"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></symbol>
+  <symbol id="i-moon" viewBox="0 0 24 24"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></symbol>
+  <symbol id="i-monitor" viewBox="0 0 24 24"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></symbol>
+</svg>
+
+<script>
+/* ---------- theme ---------- */
+const root = document.documentElement;
+function setPref(pref){
+  try{ localStorage.setItem('triageiq-theme', pref); }catch(e){}
+  const dark = pref === 'dark' || (pref === 'system' && matchMedia('(prefers-color-scheme: dark)').matches);
+  root.dataset.theme = dark ? 'dark' : 'light';
+  root.dataset.pref = pref;
+  document.querySelectorAll('.theme button').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.pref === pref)));
+}
+document.querySelector('.theme').addEventListener('click', e => { const b = e.target.closest('button'); if(b) setPref(b.dataset.pref); });
+matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => { if(root.dataset.pref === 'system') setPref('system'); });
+setPref(root.dataset.pref || 'system');
+
+/* ---------- sign in ---------- */
+const form = document.getElementById('form');
+const errorBox = document.getElementById('error');
+const submit = document.getElementById('submit');
+const pw = document.getElementById('password');
+
+document.getElementById('reveal').addEventListener('click', e => {
+  const show = pw.type === 'password';
+  pw.type = show ? 'text' : 'password';
+  pw.classList.toggle('shown', show);
+  e.currentTarget.textContent = show ? 'Hide' : 'Show';
+});
+
+function showError(text){ errorBox.textContent = text; errorBox.classList.add('show'); }
+
+form.addEventListener('submit', async e => {
+  e.preventDefault();
+  errorBox.classList.remove('show');
+  const user = document.getElementById('user').value.trim();
+  if(!user || !pw.value){ showError('Enter your username and password.'); return; }
+  submit.disabled = true; submit.textContent = 'Signing in…';
+  try{
+    const next = new URLSearchParams(location.search).get('next') || '/';
+    const res = await fetch('/api/login', {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({user, password: pw.value, next})});
+    const data = await res.json().catch(() => ({}));
+    if(res.ok){
+      // keep a #ticket=... link from a phone notification
+      location.replace(data.next + (data.next === '/' ? location.hash : ''));
+      return;
+    }
+    showError(data.error || 'Could not sign in. Try again.');
+  }catch(err){
+    showError('Could not reach the server. Check your connection and try again.');
+  }
+  submit.disabled = false; submit.textContent = 'Sign in';
+  pw.select();
+});
+document.getElementById('user').focus();
+</script>
+</body>
+</html>

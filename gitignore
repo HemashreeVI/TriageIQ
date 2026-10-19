@@ -15,3 +15,9 @@ dashboard/decisions.db
 .idea/
 .DS_Store
 Thumbs.db
+
+# Email gateway memory and secrets
+gateway/mail_state.db
+
+# Dashboard login signing key
+dashboard/.session_secret
