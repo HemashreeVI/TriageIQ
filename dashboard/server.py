@@ -57,6 +57,10 @@ def normalize(ticket: dict, ts: float, demo: bool) -> dict:
         "ai": {k: triage.get(k) for k in ("category", "priority", "mood")},
         "truth": ticket.get("label"),
         "latency_s": triage.get("latency_s"),
+        "reply": triage.get("reply"),
+        "reply_sources": triage.get("reply_sources"),
+        "reply_error": triage.get("reply_error"),
+        "draft_latency_s": triage.get("draft_latency_s"),
         "needs_human": bool(triage.get("needs_human")),
         "demo": demo,
     }
@@ -116,6 +120,7 @@ async def demo_feed():
     import ticket_producer
 
     print("DEMO mode: simulated tickets (not real model results)")
+    past = json.loads((BASE_DIR.parent / "rag" / "past_tickets.json").read_text(encoding="utf-8"))
     n = 0
     while True:
         n += 1
@@ -130,6 +135,20 @@ async def demo_feed():
         }
         if triage["needs_human"]:
             triage.update({"category": "Unknown", "priority": "High", "mood": "Neutral"})
+        # simulated reply: reuse a past resolution of the same category
+        match = random.choice([p for p in past if p["category"] == truth["category"]] or past)
+        if random.random() < 0.92:
+            triage["reply"] = f"Thank you for contacting us. {match['resolution']} Support Team"
+            triage["reply_sources"] = [{
+                "id": match["id"],
+                "score": round(random.uniform(0.62, 0.88), 2),
+                "question": match["question"],
+            }]
+            triage["draft_latency_s"] = round(max(3.0, random.gauss(10, 2)), 2)
+        else:
+            triage["reply"] = None
+            triage["reply_sources"] = []
+            triage["reply_error"] = "No similar past ticket found, a human should answer"
         ticket["triage"] = triage
         publish(normalize(ticket, time.time(), demo=True))
         await asyncio.sleep(random.uniform(0.6, 1.8))

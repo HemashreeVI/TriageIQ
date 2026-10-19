@@ -34,15 +34,15 @@
   .kpi .v{font-size:30px;font-weight:800;margin-top:4px}
   .kpi .l{color:var(--muted);font-size:12px}
   .pipeline{position:relative;display:flex;justify-content:space-between;gap:8px;padding:22px 14px;margin-bottom:14px;overflow:hidden}
-  .pipeline .line{position:absolute;left:10%;right:10%;top:50%;height:2px;background:repeating-linear-gradient(90deg,#334155 0 8px,transparent 8px 16px)}
+  .pipeline .line{position:absolute;left:8.3%;right:8.3%;top:50%;height:2px;background:repeating-linear-gradient(90deg,#334155 0 8px,transparent 8px 16px)}
   .stage{position:relative;z-index:1;flex:1;max-width:200px;text-align:center;background:var(--panel2);border:1.5px solid #27325f;border-radius:14px;padding:12px 6px;transition:all .25s}
   .stage .ico{font-size:22px}
   .stage b{display:block;font-size:14px;margin-top:2px}
   .stage small{display:block;color:var(--muted);font-size:11px;margin-top:2px}
   .stage .m{display:block;color:var(--cyan);font-weight:700;font-size:13px;margin-top:6px;min-height:16px}
   .stage.pulse{border-color:#67e8f9;box-shadow:0 0 18px rgba(103,232,249,.45);transform:translateY(-3px)}
-  .dot{position:absolute;top:calc(50% - 5px);left:10%;width:10px;height:10px;border-radius:50%;background:var(--red);box-shadow:0 0 10px var(--red);z-index:2;animation:travel 1.6s linear forwards}
-  @keyframes travel{to{left:90%}}
+  .dot{position:absolute;top:calc(50% - 5px);left:8.3%;width:10px;height:10px;border-radius:50%;background:var(--red);box-shadow:0 0 10px var(--red);z-index:2;animation:travel 1.6s linear forwards}
+  @keyframes travel{to{left:91.7%}}
   .grid{display:grid;grid-template-columns:repeat(12,1fr);gap:14px}
   .s4{grid-column:span 4}.s5{grid-column:span 5}.s6{grid-column:span 6}.s7{grid-column:span 7}.s8{grid-column:span 8}.s12{grid-column:span 12}
   .chart{position:relative;height:240px}
@@ -52,6 +52,12 @@
   tr.new{animation:flash 1.4s ease-out}
   @keyframes flash{from{background:rgba(103,232,249,.22)}to{background:transparent}}
   .msg{max-width:420px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:#cbd5e1}
+  tr.row{cursor:pointer}
+  tr.row:hover{background:rgba(99,102,241,.08)}
+  tr.detail td{background:#0d1430;padding:12px 16px}
+  .reply{background:#0b1226;border:1px solid var(--line);border-left:3px solid var(--cyan);border-radius:10px;padding:10px 12px;white-space:pre-wrap;color:#e2e8f0;line-height:1.5}
+  .warn{color:#fcd34d;font-size:12px;margin-bottom:6px}
+  .src{color:var(--muted);font-size:12px;margin-top:8px;line-height:1.5}
   .badge{display:inline-block;padding:2px 8px;border-radius:999px;font-size:11px;font-weight:700;margin-right:4px}
   .b-cat{background:rgba(99,102,241,.22);color:#c7d2fe}
   .b-High{background:rgba(244,63,94,.2);color:#fda4af}
@@ -97,6 +103,7 @@
   <div class="panel kpi"><div class="l">Category accuracy</div><div class="v" id="kCat">–</div></div>
   <div class="panel kpi"><div class="l">Priority accuracy</div><div class="v" id="kPri">–</div></div>
   <div class="panel kpi"><div class="l">Sent to a human</div><div class="v" id="kHuman">0</div></div>
+  <div class="panel kpi"><div class="l">Replies drafted</div><div class="v" id="kDraft">–</div></div>
 </section>
 
 <section class="panel pipeline" id="pipeline">
@@ -104,8 +111,9 @@
   <div class="stage" id="st0"><div class="ico">📨</div><b>Producer</b><small>Python script</small><span class="m">&nbsp;</span></div>
   <div class="stage" id="st1"><div class="ico">🚆</div><b>Kafka</b><small>topic: tickets</small><span class="m">&nbsp;</span></div>
   <div class="stage" id="st2"><div class="ico">🧠</div><b>LLM Classifier</b><small>Ollama qwen2.5:3b</small><span class="m" id="m2">&nbsp;</span></div>
-  <div class="stage" id="st3"><div class="ico">🚆</div><b>Kafka</b><small>topic: tickets.triaged</small><span class="m" id="m3">&nbsp;</span></div>
-  <div class="stage" id="st4"><div class="ico">📊</div><b>This dashboard</b><small>live view</small><span class="m" id="m4">&nbsp;</span></div>
+  <div class="stage" id="st3"><div class="ico">📚</div><b>RAG + Qdrant</b><small>similar past tickets</small><span class="m" id="m3">&nbsp;</span></div>
+  <div class="stage" id="st4"><div class="ico">🚆</div><b>Kafka</b><small>topic: tickets.triaged</small><span class="m" id="m4">&nbsp;</span></div>
+  <div class="stage" id="st5"><div class="ico">📊</div><b>This dashboard</b><small>live view</small><span class="m" id="m5">&nbsp;</span></div>
 </section>
 
 <section class="grid">
@@ -144,9 +152,9 @@
 
   <div class="panel s12">
     <h3>Live ticket feed</h3>
-    <p class="hint">Newest first. C = category, P = priority: a green tick means the AI matched the answer key.</p>
+    <p class="hint">Newest first. C = category, P = priority: a green tick means the AI matched the answer key. Click a row to read the suggested reply.</p>
     <table>
-      <thead><tr><th>Time</th><th>Ticket</th><th>Message</th><th>AI decision</th><th>Check</th><th>AI time</th></tr></thead>
+      <thead><tr><th>Time</th><th>Ticket</th><th>Message</th><th>AI decision</th><th>Check</th><th>Reply</th><th>AI time</th></tr></thead>
       <tbody id="feed"></tbody>
     </table>
   </div>
@@ -249,19 +257,38 @@ function flow(){
   dot.className = 'dot';
   dot.addEventListener('animationend', () => dot.remove());
   pipe.appendChild(dot);
-  for(let i = 0; i < 5; i++){
+  for(let i = 0; i < 6; i++){
     setTimeout(() => {
       const st = $('st' + i);
       st.classList.add('pulse');
       setTimeout(() => st.classList.remove('pulse'), 280);
-    }, i * 400);
+    }, i * 320);
   }
 }
 
 /* ---------- feed ---------- */
+function detailHtml(ev){
+  let html = `<div class="src"><b>Customer wrote:</b> ${esc(ev.message)}</div>`;
+  if(ev.reply){
+    html += `<div class="warn" style="margin-top:10px">DRAFT · an agent must check this before sending${ev.demo ? ' · demo text' : ''}</div><div class="reply">${esc(ev.reply)}</div>`;
+  } else if(ev.reply_error){
+    html += `<div class="warn" style="margin-top:10px">No draft written · routed to a human agent</div><div class="src">Reason: ${esc(ev.reply_error)}</div>`;
+  } else {
+    html += '<div class="src" style="margin-top:10px">No reply was drafted for this ticket (it was classified without replies, or before reply drafting existed).</div>';
+  }
+  if(ev.reply_sources && ev.reply_sources.length){
+    html += '<div class="src"><b>Closest past tickets:</b> ' + ev.reply_sources.map(s => `${esc(s.id)} (${esc(s.score)}) "${esc(s.question)}"`).join(' · ') + '</div>';
+  }
+  if(typeof ev.draft_latency_s === 'number'){
+    html += `<div class="src">Reply written in ${ev.draft_latency_s.toFixed(1)}s</div>`;
+  }
+  return html;
+}
+
 function addFeedRow(ev, animate){
   const tr = document.createElement('tr');
-  if(animate) tr.className = 'new';
+  tr.className = 'row' + (animate ? ' new' : '');
+  tr.title = 'Click to see the suggested reply';
   const t = new Date(ev.ts * 1000).toLocaleTimeString();
   let check = '<span style="color:#64748b">–</span>';
   if(ev.truth){
@@ -270,16 +297,29 @@ function addFeedRow(ev, animate){
     check = `<span class="chip ${c?'ok':'bad'}">C ${c?'✓':'✗'}</span><span class="chip ${p?'ok':'bad'}">P ${p?'✓':'✗'}</span>`;
   }
   const human = ev.needs_human ? '<span class="badge b-human">HUMAN</span>' : '';
+  const replyCell = ev.reply ? '<span class="chip ok">✉ draft</span>'
+                  : (ev.reply_error ? '<span class="chip bad">none</span>' : '<span style="color:#64748b">–</span>');
   tr.innerHTML = `
     <td>${esc(t)}</td>
     <td><b>${esc(ev.id)}</b></td>
     <td class="msg" title="${esc(ev.message)}">${esc(ev.message)}</td>
     <td>${human}<span class="badge b-cat">${esc(ev.ai.category)}</span><span class="badge b-${esc(ev.ai.priority)}">${esc(ev.ai.priority)}</span>${MOOD_ICON[ev.ai.mood] || ''} ${esc(ev.ai.mood)}</td>
     <td>${check}</td>
+    <td>${replyCell}</td>
     <td>${typeof ev.latency_s === 'number' ? ev.latency_s.toFixed(1) + 's' : '–'}</td>`;
+
+  const detail = document.createElement('tr');
+  detail.className = 'detail';
+  detail.style.display = 'none';
+  detail.innerHTML = `<td colspan="7">${detailHtml(ev)}</td>`;
+  tr.addEventListener('click', () => {
+    detail.style.display = detail.style.display === 'none' ? '' : 'none';
+  });
+
   const feed = $('feed');
+  feed.prepend(detail);
   feed.prepend(tr);
-  while(feed.children.length > FEED_ROWS) feed.removeChild(feed.lastChild);
+  while(feed.children.length > FEED_ROWS * 2) feed.removeChild(feed.lastChild);
 }
 
 /* ---------- charts + numbers (refreshed every second) ---------- */
@@ -302,9 +342,14 @@ function render(force){
   $('kCat').textContent = graded.length ? Math.round(100 * catOk / graded.length) + '%' : '–';
   $('kPri').textContent = graded.length ? Math.round(100 * priOk / graded.length) + '%' : '–';
   $('kHuman').textContent = human;
+  const drafted = events.filter(e => e.reply).length;
+  const dl = events.filter(e => typeof e.draft_latency_s === 'number').slice(-50).map(e => e.draft_latency_s);
+  const avgDraft = dl.length ? dl.reduce((a,b) => a + b, 0) / dl.length : null;
+  $('kDraft').textContent = total ? Math.round(100 * drafted / total) + '%' : '–';
   $('m2').textContent = avgLat === null ? '\u00a0' : '~' + avgLat.toFixed(1) + 's / ticket';
-  $('m3').textContent = total + ' tickets';
-  $('m4').textContent = paused ? 'paused' : 'live';
+  $('m3').textContent = avgDraft === null ? '\u00a0' : '~' + avgDraft.toFixed(1) + 's / reply';
+  $('m4').textContent = total + ' tickets';
+  $('m5').textContent = paused ? 'paused' : 'live';
 
   // tickets over time (24 buckets x 5s)
   const B = 24, W = 5;
@@ -382,4 +427,4 @@ $('pauseBtn').addEventListener('click', () => {
 });
 </script>
 </body>
-</html> 
+</html>
