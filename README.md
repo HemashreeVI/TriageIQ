@@ -103,17 +103,39 @@ The console can be opened from anywhere through a free **Cloudflare quick tunnel
 
 ## Tech stack
 
+<p align="center">
+  <img src="https://img.shields.io/badge/Python-3776AB?style=for-the-badge&logo=python&logoColor=white" alt="Python"/>
+  <img src="https://img.shields.io/badge/Apache%20Kafka-231F20?style=for-the-badge&logo=apachekafka&logoColor=white" alt="Apache Kafka"/>
+  <img src="https://img.shields.io/badge/Ollama-000000?style=for-the-badge&logo=ollama&logoColor=white" alt="Ollama"/>
+  <img src="https://img.shields.io/badge/Qdrant-DC244C?style=for-the-badge&logo=qdrant&logoColor=white" alt="Qdrant"/>
+  <img src="https://img.shields.io/badge/FastAPI-009688?style=for-the-badge&logo=fastapi&logoColor=white" alt="FastAPI"/>
+  <img src="https://img.shields.io/badge/SQLite-003B57?style=for-the-badge&logo=sqlite&logoColor=white" alt="SQLite"/>
+  <img src="https://img.shields.io/badge/Docker-2496ED?style=for-the-badge&logo=docker&logoColor=white" alt="Docker"/>
+  <img src="https://img.shields.io/badge/Gmail-EA4335?style=for-the-badge&logo=gmail&logoColor=white" alt="Gmail"/>
+  <img src="https://img.shields.io/badge/Cloudflare-F38020?style=for-the-badge&logo=cloudflare&logoColor=white" alt="Cloudflare"/>
+  <img src="https://img.shields.io/badge/ntfy-57A143?style=for-the-badge&logo=ntfy&logoColor=white" alt="ntfy"/>
+  <img src="https://img.shields.io/badge/Chart.js-FF6384?style=for-the-badge&logo=chartdotjs&logoColor=white" alt="Chart.js"/>
+  <img src="https://img.shields.io/badge/HTML5-E34F26?style=for-the-badge&logo=html5&logoColor=white" alt="HTML5"/>
+  <img src="https://img.shields.io/badge/JavaScript-F7DF1E?style=for-the-badge&logo=javascript&logoColor=black" alt="JavaScript"/>
+  <img src="https://img.shields.io/badge/Git-F05032?style=for-the-badge&logo=git&logoColor=white" alt="Git"/>
+  <img src="https://img.shields.io/badge/GitHub-181717?style=for-the-badge&logo=github&logoColor=white" alt="GitHub"/>
+</p>
+
 | Tool | Role |
 |---|---|
+| Python | Every service: gateway, classifier, RAG, console server |
 | Apache Kafka | Streams tickets between services |
-| Ollama (`qwen2.5:3b`) | Local LLM for classification and reply drafting |
-| Qdrant + `nomic-embed-text` | Semantic search over past resolved tickets |
+| Ollama (`qwen2.5:3b`, `nomic-embed-text`) | Local LLM for classification and drafting, and text embeddings |
+| Qdrant | Vector database for semantic search over past resolved tickets |
 | FastAPI + Server-Sent Events | Console backend with live updates |
 | SQLite | Agent decisions and email-gateway state |
-| Gmail IMAP / SMTP | Receiving and sending real email |
-| Cloudflare Tunnel, ntfy | Phone access and push notifications |
+| Docker Compose | Runs Kafka and Qdrant with one command |
+| Gmail (IMAP / SMTP) | Receiving and sending real email |
+| Cloudflare Tunnel | Secure public link to the console for phone access |
+| ntfy | Free push notifications to the phone |
 | Chart.js | Analytics charts |
-| Docker Compose | Kafka and Qdrant in one command |
+| HTML, CSS, JavaScript | The console and sign-in page, with no front-end framework |
+| Git and GitHub | Version control and hosting |
 
 ---
 
