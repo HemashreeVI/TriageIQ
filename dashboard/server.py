@@ -11,12 +11,16 @@ Run (simulated tickets, no Kafka or Ollama needed, just to preview):
     python dashboard/server.py --demo
 
 Then open  http://localhost:8050
+
+Agents can Approve, Edit or Send to human on every ticket. Those decisions are
+saved in dashboard/decisions.db (live mode) or kept in memory only (demo mode).
 """
 
 import argparse
 import asyncio
 import json
 import random
+import sqlite3
 import sys
 import threading
 import time
@@ -27,7 +31,7 @@ from pathlib import Path
 
 import uvicorn
 from fastapi import FastAPI, Request
-from fastapi.responses import FileResponse, StreamingResponse
+from fastapi.responses import FileResponse, JSONResponse, StreamingResponse
 
 BASE_DIR = Path(__file__).parent
 sys.path.insert(0, str(BASE_DIR.parent / "producer"))  # so demo mode can reuse make_ticket()
@@ -45,11 +49,69 @@ history = deque(maxlen=500)  # last 500 events, so a page refresh is not empty
 subscribers = set()          # one queue per open browser tab
 stop_event = threading.Event()
 
+# ---------- agent decisions (Approve / Edit / Send to human) ----------
+VALID_ACTIONS = {"approved", "edited", "manual", "escalated"}
+MAX_REPLY_CHARS = 2000
+db = None
+db_lock = threading.Lock()
+
+
+def init_db(path):
+    """Open (and create if needed) the small database that remembers agent decisions."""
+    global db
+    db = sqlite3.connect(str(path), check_same_thread=False)
+    db.execute(
+        """CREATE TABLE IF NOT EXISTS decisions (
+               uid TEXT PRIMARY KEY,
+               ticket_id TEXT,
+               action TEXT NOT NULL,
+               original_reply TEXT,
+               final_reply TEXT,
+               decided_at REAL NOT NULL)"""
+    )
+    db.commit()
+
+
+def save_decision(uid, ticket_id, action, original_reply, final_reply):
+    """Store one decision (a newer decision on the same ticket replaces the older one)."""
+    row = {"uid": uid, "ticket_id": ticket_id, "action": action,
+           "original_reply": original_reply, "final_reply": final_reply,
+           "decided_at": time.time()}
+    with db_lock:
+        db.execute(
+            "INSERT OR REPLACE INTO decisions VALUES (?, ?, ?, ?, ?, ?)",
+            (row["uid"], row["ticket_id"], row["action"],
+             row["original_reply"], row["final_reply"], row["decided_at"]),
+        )
+        db.commit()
+    return row
+
+
+def load_decisions(uids):
+    """Return {uid: {uid, action, final_reply, decided_at}} for the given tickets."""
+    wanted = set(uids)
+    with db_lock:
+        rows = db.execute("SELECT uid, action, final_reply, decided_at FROM decisions").fetchall()
+    keys = ("uid", "action", "final_reply", "decided_at")
+    return {r[0]: dict(zip(keys, r)) for r in rows if r[0] in wanted}
+
+
+def find_event(uid):
+    """Find a ticket event by its unique id (newest first)."""
+    for ev in reversed(history):
+        if ev.get("uid") == uid:
+            return ev
+    return None
+
 
 def normalize(ticket: dict, ts: float, demo: bool) -> dict:
     """Turn a triaged ticket into the small event the browser needs."""
     triage = ticket.get("triage", {})
+    # The producer restarts at TKT-10001 every run, so the id alone is not unique.
+    # id + creation time is.
+    uid = f"{ticket.get('ticket_id')}|{ticket.get('created_at') or ts}"
     return {
+        "uid": uid,
         "id": ticket.get("ticket_id"),
         "message": ticket.get("message", ""),
         "channel": ticket.get("channel"),
@@ -72,7 +134,7 @@ def publish(event: dict):
     event["seq"] = state["seq"]
     history.append(event)
     for q in list(subscribers):
-        q.put_nowait(event)
+        q.put_nowait(("ticket", event))
 
 
 def kafka_feed(loop):
@@ -156,6 +218,7 @@ async def demo_feed():
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    init_db(":memory:" if state["mode"] == "demo" else BASE_DIR / "decisions.db")
     task = None
     if state["mode"] == "demo":
         task = asyncio.create_task(demo_feed())
@@ -189,14 +252,18 @@ async def events(request: Request):
     async def stream():
         subscribers.add(q)
         try:
-            init = {"mode": state["mode"], "events": list(history)}
+            init = {
+                "mode": state["mode"],
+                "events": list(history),
+                "decisions": load_decisions(e["uid"] for e in history),
+            }
             yield f"event: init\ndata: {json.dumps(init)}\n\n"
             while True:
                 if await request.is_disconnected():
                     break
                 try:
-                    event = await asyncio.wait_for(q.get(), timeout=15)
-                    yield f"event: ticket\ndata: {json.dumps(event)}\n\n"
+                    kind, payload = await asyncio.wait_for(q.get(), timeout=15)
+                    yield f"event: {kind}\ndata: {json.dumps(payload)}\n\n"
                 except asyncio.TimeoutError:
                     yield ": keep-alive\n\n"
         finally:
@@ -207,6 +274,60 @@ async def events(request: Request):
         media_type="text/event-stream",
         headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"},
     )
+
+
+def reject(message: str, status: int = 400):
+    return JSONResponse({"error": message}, status_code=status)
+
+
+@app.post("/api/decision")
+async def decide(request: Request):
+    """An agent's decision on one ticket: approved, edited, manual (own reply) or escalated."""
+    if not request.headers.get("content-type", "").startswith("application/json"):
+        return reject("Send JSON", 415)
+    try:
+        body = await request.json()
+    except Exception:
+        return reject("Invalid JSON")
+    if not isinstance(body, dict):
+        return reject("Invalid JSON")
+
+    uid, action, text = body.get("uid"), body.get("action"), body.get("final_reply")
+    if not isinstance(uid, str) or action not in VALID_ACTIONS:
+        return reject("Unknown ticket or action")
+    event = find_event(uid)
+    if event is None:
+        return reject("That ticket is no longer in memory. Refresh the page.", 404)
+
+    original = event.get("reply")  # always taken from the server's copy, never from the browser
+
+    if action in ("edited", "manual"):
+        if not isinstance(text, str) or not text.strip():
+            return reject("The reply cannot be empty")
+        text = text.strip()
+        if len(text) > MAX_REPLY_CHARS:
+            return reject(f"The reply is too long (max {MAX_REPLY_CHARS} characters)")
+
+    if action == "approved":
+        if not original:
+            return reject("There is no draft to approve")
+        text = original
+    elif action == "edited":
+        if not original:
+            return reject("There is no draft to edit. Use Write reply instead")
+        if text == original.strip():  # saved without changing anything = plain approval
+            action, text = "approved", original
+    elif action == "manual":
+        if original:
+            return reject("A draft exists. Edit it instead")
+    else:  # escalated
+        text = None
+
+    row = save_decision(uid, event["id"], action, original, text)
+    public = {k: row[k] for k in ("uid", "action", "final_reply", "decided_at")}
+    for q in list(subscribers):  # update every open browser tab
+        q.put_nowait(("decision", public))
+    return public
 
 
 if __name__ == "__main__":

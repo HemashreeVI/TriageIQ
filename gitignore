@@ -7,6 +7,9 @@ venv/
 # Secrets (API keys go here, never commit them)
 .env
 
+# Agent decisions saved by the dashboard (local data)
+dashboard/decisions.db
+
 # Editors / OS
 .vscode/
 .idea/

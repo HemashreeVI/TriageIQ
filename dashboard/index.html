@@ -30,7 +30,7 @@
   .panel{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:14px 16px}
   .panel h3{margin:0 0 2px;font-size:14px;font-weight:700}
   .panel .hint{margin:0 0 10px;color:var(--muted);font-size:12px}
-  .kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px;margin-bottom:14px}
+  .kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:12px;margin-bottom:14px}
   .kpi .v{font-size:30px;font-weight:800;margin-top:4px}
   .kpi .l{color:var(--muted);font-size:12px}
   .pipeline{position:relative;display:flex;justify-content:space-between;gap:8px;padding:22px 14px;margin-bottom:14px;overflow:hidden}
@@ -58,6 +58,14 @@
   .reply{background:#0b1226;border:1px solid var(--line);border-left:3px solid var(--cyan);border-radius:10px;padding:10px 12px;white-space:pre-wrap;color:#e2e8f0;line-height:1.5}
   .warn{color:#fcd34d;font-size:12px;margin-bottom:6px}
   .src{color:var(--muted);font-size:12px;margin-top:8px;line-height:1.5}
+  .decided{margin-top:12px;font-size:13px}
+  .err{color:#fda4af;font-size:12px;margin-top:8px}
+  .actions{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-top:12px}
+  .btn-ok{border-color:rgba(52,211,153,.6);color:#6ee7b7}
+  .btn-warn{border-color:rgba(245,158,11,.6);color:#fcd34d}
+  .btn-esc{border-color:rgba(244,63,94,.6);color:#fda4af}
+  button:disabled{opacity:.5;cursor:default}
+  textarea.editor{width:100%;min-height:110px;margin-top:10px;background:#0b1226;color:var(--text);border:1px solid var(--accent);border-radius:10px;padding:10px 12px;font:inherit;line-height:1.5;resize:vertical}
   .badge{display:inline-block;padding:2px 8px;border-radius:999px;font-size:11px;font-weight:700;margin-right:4px}
   .b-cat{background:rgba(99,102,241,.22);color:#c7d2fe}
   .b-High{background:rgba(244,63,94,.2);color:#fda4af}
@@ -67,6 +75,8 @@
   .chip{display:inline-block;padding:1px 6px;border-radius:6px;font-size:11px;font-weight:700;margin-right:3px}
   .chip.ok{background:rgba(52,211,153,.18);color:#6ee7b7}
   .chip.bad{background:rgba(244,63,94,.2);color:#fda4af}
+  .chip.info{background:rgba(99,102,241,.22);color:#c7d2fe}
+  .chip.warn{background:rgba(245,158,11,.2);color:#fcd34d}
   .cm td,.cm th{text-align:center;padding:6px 4px;font-size:12px}
   .cm td.lab{text-align:left;color:var(--muted);font-weight:600}
   footer{color:var(--muted);font-size:12px;margin-top:14px;text-align:center}
@@ -104,6 +114,8 @@
   <div class="panel kpi"><div class="l">Priority accuracy</div><div class="v" id="kPri">–</div></div>
   <div class="panel kpi"><div class="l">Sent to a human</div><div class="v" id="kHuman">0</div></div>
   <div class="panel kpi"><div class="l">Replies drafted</div><div class="v" id="kDraft">–</div></div>
+  <div class="panel kpi"><div class="l">Agent decisions</div><div class="v" id="kDecided">0</div></div>
+  <div class="panel kpi"><div class="l">Drafts approved as-is</div><div class="v" id="kAccept">–</div></div>
 </section>
 
 <section class="panel pipeline" id="pipeline">
@@ -152,7 +164,7 @@
 
   <div class="panel s12">
     <h3>Live ticket feed</h3>
-    <p class="hint">Newest first. C = category, P = priority: a green tick means the AI matched the answer key. Click a row to read the suggested reply.</p>
+    <p class="hint">Newest first. C = category, P = priority: a green tick means the AI matched the answer key. Click a row to read the suggested reply, then approve it, edit it, or send it to a human.</p>
     <table>
       <thead><tr><th>Time</th><th>Ticket</th><th>Message</th><th>AI decision</th><th>Check</th><th>Reply</th><th>AI time</th></tr></thead>
       <tbody id="feed"></tbody>
@@ -172,6 +184,11 @@ const FEED_ROWS = 14;
 
 let events = [];
 let lastSeq = 0;
+const decisions = {};  // uid -> agent decision
+const editing = {};    // uid -> true while the editor box is open
+const draftText = {};  // uid -> text typed in the editor but not saved yet
+const errors = {};     // uid -> last error message
+const rowMap = {};     // uid -> {tr, detail, ev} for rows in the feed
 let paused = false;
 let mode = 'live';
 
@@ -225,6 +242,9 @@ es.addEventListener('init', e => {
   const d = JSON.parse(e.data);
   mode = d.mode;
   events = []; lastSeq = 0;
+  for(const k of Object.keys(decisions)) delete decisions[k];
+  Object.assign(decisions, d.decisions || {});
+  for(const k of Object.keys(rowMap)) delete rowMap[k];
   $('feed').innerHTML = '';
   d.events.forEach(addEvent);
   events.slice(-FEED_ROWS).forEach(ev => addFeedRow(ev, false));
@@ -238,6 +258,14 @@ es.addEventListener('ticket', e => {
     flow();
     refreshStatus();
   }
+});
+es.addEventListener('decision', e => {
+  const d = JSON.parse(e.data);
+  decisions[d.uid] = d;
+  delete editing[d.uid];
+  delete draftText[d.uid];
+  refreshRow(d.uid);
+  render(true);
 });
 es.onerror = () => setStatus('down', 'DISCONNECTED · RETRYING');
 
@@ -267,7 +295,36 @@ function flow(){
 }
 
 /* ---------- feed ---------- */
-function detailHtml(ev){
+const ACTION_LABEL = {
+  approved: 'Approved as written',
+  edited: 'Edited, then approved',
+  manual: 'Reply written by an agent',
+  escalated: 'Sent to a human'
+};
+
+function replyChip(ev, dec){
+  if(dec){
+    if(dec.action === 'approved') return '<span class="chip ok">✓ approved</span>';
+    if(dec.action === 'edited') return '<span class="chip info">✎ edited</span>';
+    if(dec.action === 'manual') return '<span class="chip info">✎ written</span>';
+    if(dec.action === 'escalated') return '<span class="chip warn">→ human</span>';
+  }
+  if(ev.reply) return '<span class="chip ok">✉ draft</span>';
+  if(ev.reply_error) return '<span class="chip bad">none</span>';
+  return '<span style="color:#64748b">–</span>';
+}
+
+function actionButtons(ev){
+  const u = esc(ev.uid);
+  const send = `<button class="btn-esc" data-act="escalate" data-uid="${u}">→ Send to human</button>`;
+  if(ev.reply){
+    return `<button class="btn-ok" data-act="approve" data-uid="${u}">✓ Approve reply</button>
+            <button class="btn-warn" data-act="edit" data-uid="${u}">✎ Edit reply</button>${send}`;
+  }
+  return `<button class="btn-warn" data-act="write" data-uid="${u}">✎ Write reply</button>${send}`;
+}
+
+function detailHtml(ev, dec, isEditing, err){
   let html = `<div class="src"><b>Customer wrote:</b> ${esc(ev.message)}</div>`;
   if(ev.reply){
     html += `<div class="warn" style="margin-top:10px">DRAFT · an agent must check this before sending${ev.demo ? ' · demo text' : ''}</div><div class="reply">${esc(ev.reply)}</div>`;
@@ -282,12 +339,36 @@ function detailHtml(ev){
   if(typeof ev.draft_latency_s === 'number'){
     html += `<div class="src">Reply written in ${ev.draft_latency_s.toFixed(1)}s</div>`;
   }
+
+  if(dec){
+    html += `<div class="decided"><b>${esc(ACTION_LABEL[dec.action] || dec.action)}</b> · ${esc(new Date(dec.decided_at * 1000).toLocaleTimeString())}</div>`;
+    if(dec.final_reply && dec.action !== 'approved'){
+      html += `<div class="warn" style="margin-top:8px">Final reply</div><div class="reply">${esc(dec.final_reply)}</div>`;
+    }
+  }
+  if(err) html += `<div class="err">${esc(err)}</div>`;
+
+  if(isEditing){
+    const start = (ev.uid in draftText) ? draftText[ev.uid] : (dec && dec.final_reply ? dec.final_reply : (ev.reply || ''));
+    const u = esc(ev.uid);
+    html += `<textarea class="editor" maxlength="2000">${esc(start)}</textarea>
+      <div class="actions">
+        <button class="btn-ok" data-act="save" data-uid="${u}">Save and approve</button>
+        <button data-act="cancel" data-uid="${u}">Cancel</button>
+      </div>`;
+  } else {
+    html += `<div class="actions">${actionButtons(ev)}</div>`;
+  }
+  html += '<div class="src">Nothing is emailed from here: TriageIQ records the agent’s decision. A real deployment would send the approved text through the helpdesk’s API.</div>';
   return html;
 }
 
 function addFeedRow(ev, animate){
+  const uid = ev.uid;
+  const dec = decisions[uid];
   const tr = document.createElement('tr');
   tr.className = 'row' + (animate ? ' new' : '');
+  tr.dataset.uid = uid;
   tr.title = 'Click to see the suggested reply';
   const t = new Date(ev.ts * 1000).toLocaleTimeString();
   let check = '<span style="color:#64748b">–</span>';
@@ -297,30 +378,80 @@ function addFeedRow(ev, animate){
     check = `<span class="chip ${c?'ok':'bad'}">C ${c?'✓':'✗'}</span><span class="chip ${p?'ok':'bad'}">P ${p?'✓':'✗'}</span>`;
   }
   const human = ev.needs_human ? '<span class="badge b-human">HUMAN</span>' : '';
-  const replyCell = ev.reply ? '<span class="chip ok">✉ draft</span>'
-                  : (ev.reply_error ? '<span class="chip bad">none</span>' : '<span style="color:#64748b">–</span>');
   tr.innerHTML = `
     <td>${esc(t)}</td>
     <td><b>${esc(ev.id)}</b></td>
     <td class="msg" title="${esc(ev.message)}">${esc(ev.message)}</td>
     <td>${human}<span class="badge b-cat">${esc(ev.ai.category)}</span><span class="badge b-${esc(ev.ai.priority)}">${esc(ev.ai.priority)}</span>${MOOD_ICON[ev.ai.mood] || ''} ${esc(ev.ai.mood)}</td>
     <td>${check}</td>
-    <td>${replyCell}</td>
+    <td class="replycell">${replyChip(ev, dec)}</td>
     <td>${typeof ev.latency_s === 'number' ? ev.latency_s.toFixed(1) + 's' : '–'}</td>`;
 
   const detail = document.createElement('tr');
   detail.className = 'detail';
+  detail.dataset.uid = uid;
   detail.style.display = 'none';
-  detail.innerHTML = `<td colspan="7">${detailHtml(ev)}</td>`;
+  detail.innerHTML = `<td colspan="7">${detailHtml(ev, dec, editing[uid], errors[uid])}</td>`;
   tr.addEventListener('click', () => {
     detail.style.display = detail.style.display === 'none' ? '' : 'none';
   });
+  rowMap[uid] = {tr, detail, ev};
 
   const feed = $('feed');
   feed.prepend(detail);
   feed.prepend(tr);
-  while(feed.children.length > FEED_ROWS * 2) feed.removeChild(feed.lastChild);
+  while(feed.children.length > FEED_ROWS * 2){
+    const last = feed.lastChild;
+    delete rowMap[last.dataset.uid];
+    feed.removeChild(last);
+  }
 }
+
+function refreshRow(uid){
+  const r = rowMap[uid];
+  if(!r) return;
+  const dec = decisions[uid];
+  r.tr.querySelector('.replycell').innerHTML = replyChip(r.ev, dec);
+  r.detail.firstElementChild.innerHTML = detailHtml(r.ev, dec, editing[uid], errors[uid]);
+}
+
+// Buttons inside the opened rows (one listener for the whole feed)
+$('feed').addEventListener('click', async e => {
+  const btn = e.target.closest('button[data-act]');
+  if(!btn) return;
+  const uid = btn.dataset.uid;
+  const act = btn.dataset.act;
+  delete errors[uid];
+
+  if(act === 'edit' || act === 'write'){ editing[uid] = true; refreshRow(uid); return; }
+  if(act === 'cancel'){ delete editing[uid]; delete draftText[uid]; refreshRow(uid); return; }
+
+  let action, text = null;
+  if(act === 'approve') action = 'approved';
+  else if(act === 'escalate') action = 'escalated';
+  else if(act === 'save'){
+    const box = btn.closest('tr').querySelector('textarea');
+    text = box ? box.value : '';
+    draftText[uid] = text;   // keep what was typed if saving fails
+    action = rowMap[uid] && rowMap[uid].ev.reply ? 'edited' : 'manual';
+  } else return;
+
+  btn.disabled = true;
+  try{
+    const res = await fetch('/api/decision', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({uid, action, final_reply: text})
+    });
+    const data = await res.json().catch(() => ({}));
+    if(res.ok){ decisions[uid] = data; delete editing[uid]; delete draftText[uid]; }
+    else { errors[uid] = data.error || 'Could not save the decision'; }
+  }catch(err){
+    errors[uid] = 'Could not reach the dashboard server';
+  }
+  refreshRow(uid);
+  render(true);
+});
 
 /* ---------- charts + numbers (refreshed every second) ---------- */
 function render(force){
@@ -346,6 +477,11 @@ function render(force){
   const dl = events.filter(e => typeof e.draft_latency_s === 'number').slice(-50).map(e => e.draft_latency_s);
   const avgDraft = dl.length ? dl.reduce((a,b) => a + b, 0) / dl.length : null;
   $('kDraft').textContent = total ? Math.round(100 * drafted / total) + '%' : '–';
+  const decided = events.filter(e => decisions[e.uid]);
+  const nApproved = decided.filter(e => decisions[e.uid].action === 'approved').length;
+  const nEdited = decided.filter(e => decisions[e.uid].action === 'edited').length;
+  $('kDecided').textContent = decided.length;
+  $('kAccept').textContent = (nApproved + nEdited) ? Math.round(100 * nApproved / (nApproved + nEdited)) + '%' : '–';
   $('m2').textContent = avgLat === null ? '\u00a0' : '~' + avgLat.toFixed(1) + 's / ticket';
   $('m3').textContent = avgDraft === null ? '\u00a0' : '~' + avgDraft.toFixed(1) + 's / reply';
   $('m4').textContent = total + ' tickets';
@@ -420,6 +556,7 @@ $('pauseBtn').addEventListener('click', () => {
   paused = !paused;
   $('pauseBtn').textContent = paused ? 'Resume' : 'Pause';
   if(!paused){
+    for(const k of Object.keys(rowMap)) delete rowMap[k];
     $('feed').innerHTML = '';
     events.slice(-FEED_ROWS).forEach(ev => addFeedRow(ev, false));
     render(true);
