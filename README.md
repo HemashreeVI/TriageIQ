@@ -82,7 +82,12 @@ A web console for the support team: sign-in, light and dark themes, and a layout
 
 Keyboard shortcuts: `J` and `K` move through the list, `Ctrl+Enter` sends, `/` searches.
 
-> Screenshots go here: add `docs/overview.png`, `docs/review.png` and `docs/mobile.png`.
+<p align="center">
+  <img src="docs/overview.png" alt="TriageIQ console overview" width="78%"/>
+  &nbsp;
+  <img src="docs/mobile.png" alt="TriageIQ console on a phone" width="19%"/>
+</p>
+<p align="center"><sub>The console in demo mode (<code>python dashboard/server.py --demo</code>), on a laptop and on a phone. Demo tickets are simulated.</sub></p>
 
 ### Using it from a phone
 
@@ -225,6 +230,7 @@ It prints a secure `https://...trycloudflare.com` link. The address changes on e
 - [ ] Langfuse monitoring of LLM latency and errors
 - [ ] Larger, more realistic knowledge base
 - [ ] CI with GitHub Actions
-- [ ] Measured results, screenshots and demo video in this README
+- [x] Console screenshots in this README
+- [ ] Measured results and a demo video in this README
 
 Measured accuracy, latency and cost per ticket will be added here once the evaluation is done.

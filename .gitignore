@@ -1,2 +1,23 @@
-
+# Python
 __pycache__/
+*.pyc
+.venv/
+venv/
+
+# Secrets (API keys go here, never commit them)
+.env
+
+# Agent decisions saved by the dashboard (local data)
+dashboard/decisions.db
+
+# Editors / OS
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+
+# Email gateway memory and secrets
+gateway/mail_state.db
+
+# Dashboard login signing key
+dashboard/.session_secret
