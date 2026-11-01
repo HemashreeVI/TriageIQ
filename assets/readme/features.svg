@@ -1,0 +1,71 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 570" width="1200" height="570" role="img" aria-labelledby="feat-t feat-d">
+<title id="feat-t">TriageIQ features</title>
+<desc id="feat-d">Live console: Overview, approval queue, urgent, analytics. Light and dark, works on a phone.; Phone access: Cloudflare tunnel behind a login, ntfy push for every new ticket.; Safe fallback: If the model fails, the ticket goes to a human instead of getting lost.; Loop protection: Auto-replies, bounces, lists and no-reply senders are ignored.; No duplicates: De-duplicated by Message-ID, marked read only after Kafka confirms.; Rate limits: Per sender, so one address cannot flood the queue.; Secure login: Signed HttpOnly cookie, lockout, same-origin checks, strict headers.; Same thread: The approved reply goes back in the customer's email thread.; Analytics: Volume, topics, AI response time, accuracy and a confusion matrix.</desc>
+<style>
+.serif{font-family:'Iowan Old Style','Palatino Linotype',Palatino,Georgia,'Times New Roman',serif}.sans{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif}.mono{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,'Liberation Mono',monospace}
+.twinkle{animation:tw 4s ease-in-out infinite}@keyframes tw{0%,100%{opacity:.15}50%{opacity:.9}}
+.pulse{animation:pl 2.4s ease-in-out infinite;transform-box:fill-box;transform-origin:center}
+@keyframes pl{0%,100%{opacity:.55;transform:scale(1)}50%{opacity:1;transform:scale(1.35)}}
+.spin{animation:sp 60s linear infinite}@keyframes sp{to{transform:rotate(360deg)}}
+.spinr{animation:sr 40s linear infinite}@keyframes sr{to{transform:rotate(-360deg)}}
+.float{animation:fl 6s ease-in-out infinite}@keyframes fl{0%,100%{transform:translateY(0)}50%{transform:translateY(-6px)}}
+.fadein{animation:fi 1.2s ease-out both}@keyframes fi{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+</style>
+<defs>
+<radialGradient id="feat-bg" cx="70%" cy="30%" r="90%"><stop offset="0" stop-color="#13213F"/><stop offset=".55" stop-color="#0A1222"/><stop offset="1" stop-color="#050912"/></radialGradient>
+<radialGradient id="feat-glowA" cx="50%" cy="50%" r="50%"><stop offset="0" stop-color="#2A4C9A" stop-opacity=".5"/><stop offset="1" stop-color="#2A4C9A" stop-opacity="0"/></radialGradient>
+<radialGradient id="feat-glowB" cx="50%" cy="50%" r="50%"><stop offset="0" stop-color="#F4A73B" stop-opacity=".14"/><stop offset="1" stop-color="#F4A73B" stop-opacity="0"/></radialGradient>
+<linearGradient id="feat-metal" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#FFFFFF"/><stop offset=".45" stop-color="#FFD592"/><stop offset="1" stop-color="#F4A73B"/></linearGradient>
+<linearGradient id="feat-rule" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#F4A73B" stop-opacity="0"/><stop offset=".25" stop-color="#F4A73B" stop-opacity=".85"/><stop offset="1" stop-color="#F4A73B" stop-opacity="0"/></linearGradient>
+<pattern id="feat-grid" width="28" height="28" patternUnits="userSpaceOnUse"><path d="M28 0H0V28" fill="none" stroke="#F4A73B" stroke-opacity=".05"/></pattern>
+</defs>
+<rect x="1" y="1" width="1198" height="568" rx="22" fill="url(#feat-bg)" stroke="#1C2A4A"/>
+<rect x="1" y="1" width="1198" height="568" rx="22" fill="url(#feat-grid)"/>
+<ellipse cx="240" cy="171" rx="420" ry="399" fill="url(#feat-glowA)"/>
+<ellipse cx="960" cy="399" rx="300" ry="285" fill="url(#feat-glowB)"/><rect x="40" y="40" width="360" height="150" rx="16" fill="#0F1A31" stroke="#2B3F6B"/>
+<circle cx="74" cy="76" r="17" fill="#050912" stroke="#F4A73B"/>
+<text x="74" y="82" class="sans" font-size="16" fill="#FFD592" text-anchor="middle" >◉</text>
+<text x="102" y="82" class="serif" font-size="19" fill="#F2F1EC" text-anchor="start" >Live console</text>
+<text x="62" y="122" class="sans" font-size="13" fill="#CCD2E0" text-anchor="start" >Overview, approval queue, urgent, analytics.</text><text x="62" y="142" class="sans" font-size="13" fill="#93A0BB" text-anchor="start" >Light and dark, works on a phone.</text>
+<rect x="62" y="176" width="34" height="2" rx="1" fill="#F4A73B"><animate attributeName="width" values="34;316;34" dur="6s" repeatCount="indefinite"/></rect><rect x="420" y="40" width="360" height="150" rx="16" fill="#0F1A31" stroke="#2B3F6B"/>
+<circle cx="454" cy="76" r="17" fill="#050912" stroke="#F4A73B"/>
+<text x="454" y="82" class="sans" font-size="16" fill="#FFD592" text-anchor="middle" >☎</text>
+<text x="482" y="82" class="serif" font-size="19" fill="#F2F1EC" text-anchor="start" >Phone access</text>
+<text x="442" y="122" class="sans" font-size="13" fill="#CCD2E0" text-anchor="start" >Cloudflare tunnel behind a login, ntfy push</text><text x="442" y="142" class="sans" font-size="13" fill="#93A0BB" text-anchor="start" >for every new ticket.</text>
+<rect x="442" y="176" width="34" height="2" rx="1" fill="#F4A73B"><animate attributeName="width" values="34;316;34" dur="7s" repeatCount="indefinite"/></rect><rect x="800" y="40" width="360" height="150" rx="16" fill="#0F1A31" stroke="#2B3F6B"/>
+<circle cx="834" cy="76" r="17" fill="#050912" stroke="#F4A73B"/>
+<text x="834" y="82" class="sans" font-size="16" fill="#FFD592" text-anchor="middle" >⚑</text>
+<text x="862" y="82" class="serif" font-size="19" fill="#F2F1EC" text-anchor="start" >Safe fallback</text>
+<text x="822" y="122" class="sans" font-size="13" fill="#CCD2E0" text-anchor="start" >If the model fails, the ticket goes to a human</text><text x="822" y="142" class="sans" font-size="13" fill="#93A0BB" text-anchor="start" >instead of getting lost.</text>
+<rect x="822" y="176" width="34" height="2" rx="1" fill="#F4A73B"><animate attributeName="width" values="34;316;34" dur="8s" repeatCount="indefinite"/></rect><rect x="40" y="210" width="360" height="150" rx="16" fill="#0F1A31" stroke="#2B3F6B"/>
+<circle cx="74" cy="246" r="17" fill="#050912" stroke="#F4A73B"/>
+<text x="74" y="252" class="sans" font-size="16" fill="#FFD592" text-anchor="middle" >↻</text>
+<text x="102" y="252" class="serif" font-size="19" fill="#F2F1EC" text-anchor="start" >Loop protection</text>
+<text x="62" y="292" class="sans" font-size="13" fill="#CCD2E0" text-anchor="start" >Auto-replies, bounces, lists and no-reply</text><text x="62" y="312" class="sans" font-size="13" fill="#93A0BB" text-anchor="start" >senders are ignored.</text>
+<rect x="62" y="346" width="34" height="2" rx="1" fill="#F4A73B"><animate attributeName="width" values="34;316;34" dur="9s" repeatCount="indefinite"/></rect><rect x="420" y="210" width="360" height="150" rx="16" fill="#0F1A31" stroke="#2B3F6B"/>
+<circle cx="454" cy="246" r="17" fill="#050912" stroke="#F4A73B"/>
+<text x="454" y="252" class="sans" font-size="16" fill="#FFD592" text-anchor="middle" >≡</text>
+<text x="482" y="252" class="serif" font-size="19" fill="#F2F1EC" text-anchor="start" >No duplicates</text>
+<text x="442" y="292" class="sans" font-size="13" fill="#CCD2E0" text-anchor="start" >De-duplicated by Message-ID, marked read only</text><text x="442" y="312" class="sans" font-size="13" fill="#93A0BB" text-anchor="start" >after Kafka confirms.</text>
+<rect x="442" y="346" width="34" height="2" rx="1" fill="#F4A73B"><animate attributeName="width" values="34;316;34" dur="6s" repeatCount="indefinite"/></rect><rect x="800" y="210" width="360" height="150" rx="16" fill="#0F1A31" stroke="#2B3F6B"/>
+<circle cx="834" cy="246" r="17" fill="#050912" stroke="#F4A73B"/>
+<text x="834" y="252" class="sans" font-size="16" fill="#FFD592" text-anchor="middle" >▲</text>
+<text x="862" y="252" class="serif" font-size="19" fill="#F2F1EC" text-anchor="start" >Rate limits</text>
+<text x="822" y="292" class="sans" font-size="13" fill="#CCD2E0" text-anchor="start" >Per sender, so one address cannot flood the</text><text x="822" y="312" class="sans" font-size="13" fill="#93A0BB" text-anchor="start" >queue.</text>
+<rect x="822" y="346" width="34" height="2" rx="1" fill="#F4A73B"><animate attributeName="width" values="34;316;34" dur="7s" repeatCount="indefinite"/></rect><rect x="40" y="380" width="360" height="150" rx="16" fill="#0F1A31" stroke="#2B3F6B"/>
+<circle cx="74" cy="416" r="17" fill="#050912" stroke="#F4A73B"/>
+<text x="74" y="422" class="sans" font-size="16" fill="#FFD592" text-anchor="middle" >⚿</text>
+<text x="102" y="422" class="serif" font-size="19" fill="#F2F1EC" text-anchor="start" >Secure login</text>
+<text x="62" y="462" class="sans" font-size="13" fill="#CCD2E0" text-anchor="start" >Signed HttpOnly cookie, lockout, same-origin</text><text x="62" y="482" class="sans" font-size="13" fill="#93A0BB" text-anchor="start" >checks, strict headers.</text>
+<rect x="62" y="516" width="34" height="2" rx="1" fill="#F4A73B"><animate attributeName="width" values="34;316;34" dur="8s" repeatCount="indefinite"/></rect><rect x="420" y="380" width="360" height="150" rx="16" fill="#0F1A31" stroke="#2B3F6B"/>
+<circle cx="454" cy="416" r="17" fill="#050912" stroke="#F4A73B"/>
+<text x="454" y="422" class="sans" font-size="16" fill="#FFD592" text-anchor="middle" >✉</text>
+<text x="482" y="422" class="serif" font-size="19" fill="#F2F1EC" text-anchor="start" >Same thread</text>
+<text x="442" y="462" class="sans" font-size="13" fill="#CCD2E0" text-anchor="start" >The approved reply goes back in the customer's</text><text x="442" y="482" class="sans" font-size="13" fill="#93A0BB" text-anchor="start" >email thread.</text>
+<rect x="442" y="516" width="34" height="2" rx="1" fill="#F4A73B"><animate attributeName="width" values="34;316;34" dur="9s" repeatCount="indefinite"/></rect><rect x="800" y="380" width="360" height="150" rx="16" fill="#0F1A31" stroke="#2B3F6B"/>
+<circle cx="834" cy="416" r="17" fill="#050912" stroke="#F4A73B"/>
+<text x="834" y="422" class="sans" font-size="16" fill="#FFD592" text-anchor="middle" >▦</text>
+<text x="862" y="422" class="serif" font-size="19" fill="#F2F1EC" text-anchor="start" >Analytics</text>
+<text x="822" y="462" class="sans" font-size="13" fill="#CCD2E0" text-anchor="start" >Volume, topics, AI response time, accuracy and</text><text x="822" y="482" class="sans" font-size="13" fill="#93A0BB" text-anchor="start" >a confusion matrix.</text>
+<rect x="822" y="516" width="34" height="2" rx="1" fill="#F4A73B"><animate attributeName="width" values="34;316;34" dur="6s" repeatCount="indefinite"/></rect>
+</svg>

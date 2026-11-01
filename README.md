@@ -1,154 +1,24 @@
 <p align="center">
-  <img src="banner.svg" alt="TriageIQ banner" width="100%"/>
+  <img src="./assets/readme/hero.svg" width="100%" alt="TriageIQ: Support emails triaged in seconds. A human approves every reply.">
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/status-working%20end%20to%20end-2E9B63" alt="status"/>
-  <img src="https://img.shields.io/badge/Kafka-streaming-231F20?logo=apachekafka&logoColor=white" alt="Kafka"/>
-  <img src="https://img.shields.io/badge/FastAPI-backend-009688?logo=fastapi&logoColor=white" alt="FastAPI"/>
-  <img src="https://img.shields.io/badge/Ollama-local%20LLM-000000" alt="Ollama"/>
-  <img src="https://img.shields.io/badge/Qdrant-RAG-DC244C" alt="Qdrant"/>
-  <img src="https://img.shields.io/badge/Docker-containerized-2496ED?logo=docker&logoColor=white" alt="Docker"/>
+  <img src="https://img.shields.io/badge/Python-F4A73B?style=for-the-badge" alt="Python"> <img src="https://img.shields.io/badge/Kafka-F4A73B?style=for-the-badge" alt="Kafka"> <img src="https://img.shields.io/badge/Ollama-F4A73B?style=for-the-badge" alt="Ollama"> <img src="https://img.shields.io/badge/Qdrant-F4A73B?style=for-the-badge" alt="Qdrant"> <img src="https://img.shields.io/badge/FastAPI-F4A73B?style=for-the-badge" alt="FastAPI"> <img src="https://img.shields.io/badge/Docker-F4A73B?style=for-the-badge" alt="Docker">
 </p>
 
-# TriageIQ
+<img src="./assets/readme/title-features.svg" width="100%" alt="01 Features: What it does.">
+<img src="./assets/readme/features.svg" width="100%" alt="TriageIQ features">
 
-**TriageIQ reads customer support emails as they arrive, works out how urgent each one is, drafts a reply from the company's past resolved tickets, and asks a human agent to approve it. Only after approval is the reply emailed back to the customer.**
+<img src="./assets/readme/title-flow.svg" width="100%" alt="02 Pipeline: From inbox to reply.">
+<img src="./assets/readme/flow.svg" width="100%" alt="Receive → Queue → Classify → Retrieve → Draft → Approve">
 
-It runs fully on a laptop: the language model is local (Ollama), so no customer text is sent to an AI vendor.
+<img src="./assets/readme/title-table.svg" width="100%" alt="03 The Console: Built for the support team.">
+<img src="./assets/readme/table.svg" width="100%" alt="The Console">
 
-<p align="center">
-  <a href="docs/launch-video.mp4"><img src="docs/launch-video.jpg" alt="Watch the 20-second TriageIQ launch video" width="82%" /></a>
-  <br />
-  <sub>▶ <a href="docs/launch-video.mp4"><b>Watch the 20-second launch video</b></a> (opens in GitHub's video player)</sub>
-</p>
+<img src="./assets/readme/title-stack.svg" width="100%" alt="04 Tech stack: The tools behind it.">
+<img src="./assets/readme/stack.svg" width="100%" alt="TriageIQ tech stack">
 
----
-
-## The problem
-
-Support teams receive thousands of messages an hour, for example:
-
-> *"I was charged twice for my subscription and I need a refund today!!"*
-
-Someone has to read each one, decide the category and urgency, and write a reply. It is slow, and urgent tickets get buried. TriageIQ does the first 80% of that work in seconds and keeps a person in charge of what is actually sent.
-
----
-
-## What it does
-
-1. **Customer emails the support inbox.** A gateway reads the Gmail inbox and turns each new email into a ticket.
-2. **Kafka queues the ticket,** so a burst of emails waits in line instead of crashing anything.
-3. **A local LLM classifies it:** category (Billing, Technical, Delivery, Account, General), priority (High, Medium, Low) and customer mood.
-4. **RAG finds similar solved tickets** in a Qdrant vector database (matching by meaning, so "charged twice" finds "duplicate payment").
-5. **The LLM drafts a reply** grounded in those past answers.
-6. **The employee is alerted** by email and by a phone push notification.
-7. **The agent reviews the draft in the console,** edits it, and approves.
-8. **Only then is the reply emailed to the customer,** in the same email thread.
-
-If the model fails or returns something invalid, the ticket goes to a human instead of getting lost.
-
----
-
-## Architecture
-
-```mermaid
-flowchart LR
-    C[Customer email] --> G[Email gateway<br/>IMAP]
-    G --> K1[(Kafka: tickets)]
-    K1 --> L[LLM classifier<br/>Ollama qwen2.5:3b]
-    L --> R[RAG search<br/>Qdrant + nomic-embed-text]
-    R --> D[Draft reply]
-    D --> K2[(Kafka: tickets.triaged)]
-    K2 --> S[FastAPI console<br/>live updates, SQLite]
-    S --> N[Employee alert<br/>email + ntfy push]
-    S --> A{Agent approves?}
-    A -- yes --> M[Reply emailed to customer<br/>SMTP]
-    A -- send to human --> H[Manual handling]
-```
-
-<p align="center">
-  <img src="architecture.svg" alt="TriageIQ architecture" width="100%"/>
-</p>
-
----
-
-## The agent console
-
-A web console for the support team: sign-in, light and dark themes, and a layout that works on a phone.
-
-| Tab | Purpose |
-|---|---|
-| Overview | How many tickets are waiting, split by priority with the oldest wait, plus the tickets that need attention first |
-| Needs approval | The queue of AI drafts waiting for a human |
-| Urgent | High-priority tickets and tickets the AI could not handle |
-| All tickets | Everything, searchable |
-| Analytics | Volume, topics, AI response time, accuracy and a confusion matrix |
-| System | How a ticket travels, connection status, and phone setup |
-
-Keyboard shortcuts: `J` and `K` move through the list, `Ctrl+Enter` sends, `/` searches.
-
-<p align="center">
-  <img src="docs/overview.png" alt="TriageIQ console overview" width="78%"/>
-  &nbsp;
-  <img src="docs/mobile.png" alt="TriageIQ console on a phone" width="19%"/>
-</p>
-<p align="center"><sub>The console in demo mode (<code>python dashboard/server.py --demo</code>), on a laptop and on a phone. Demo tickets are simulated.</sub></p>
-
-### Using it from a phone
-
-The console can be opened from anywhere through a free **Cloudflare quick tunnel**, protected by a login. **ntfy** sends a push notification to the phone when a new email ticket arrives. The notification carries only the ticket number, category and priority, never the customer's message.
-
----
-
-## Safety design
-
-- **Nothing reaches a customer without human approval.** The console asks for confirmation before sending, and a sent reply cannot be edited or sent twice.
-- **Email loop protection:** auto-replies, bounces, mailing lists, `no-reply` senders and the company's own address are ignored.
-- **No duplicates:** emails are de-duplicated by Message-ID, and an email is marked read only after Kafka has confirmed the ticket.
-- **Rate limit per sender** to stop one address from flooding the queue.
-- **Login:** signed, HttpOnly session cookie, a lockout after repeated wrong passwords, same-origin checks on every change, and strict security headers.
-- **Secrets stay local:** `.env` is git-ignored, and the app creates the dashboard password and alert topic on first run.
-
----
-
-## Tech stack
-
-<p align="center">
-  <img src="https://img.shields.io/badge/Python-3776AB?style=for-the-badge&logo=python&logoColor=white" alt="Python"/>
-  <img src="https://img.shields.io/badge/Apache%20Kafka-231F20?style=for-the-badge&logo=apachekafka&logoColor=white" alt="Apache Kafka"/>
-  <img src="https://img.shields.io/badge/Ollama-000000?style=for-the-badge&logo=ollama&logoColor=white" alt="Ollama"/>
-  <img src="https://img.shields.io/badge/Qdrant-DC244C?style=for-the-badge&logo=qdrant&logoColor=white" alt="Qdrant"/>
-  <img src="https://img.shields.io/badge/FastAPI-009688?style=for-the-badge&logo=fastapi&logoColor=white" alt="FastAPI"/>
-  <img src="https://img.shields.io/badge/SQLite-003B57?style=for-the-badge&logo=sqlite&logoColor=white" alt="SQLite"/>
-  <img src="https://img.shields.io/badge/Docker-2496ED?style=for-the-badge&logo=docker&logoColor=white" alt="Docker"/>
-  <img src="https://img.shields.io/badge/Gmail-EA4335?style=for-the-badge&logo=gmail&logoColor=white" alt="Gmail"/>
-  <img src="https://img.shields.io/badge/Cloudflare-F38020?style=for-the-badge&logo=cloudflare&logoColor=white" alt="Cloudflare"/>
-  <img src="https://img.shields.io/badge/ntfy-57A143?style=for-the-badge&logo=ntfy&logoColor=white" alt="ntfy"/>
-  <img src="https://img.shields.io/badge/Chart.js-FF6384?style=for-the-badge&logo=chartdotjs&logoColor=white" alt="Chart.js"/>
-  <img src="https://img.shields.io/badge/HTML5-E34F26?style=for-the-badge&logo=html5&logoColor=white" alt="HTML5"/>
-  <img src="https://img.shields.io/badge/JavaScript-F7DF1E?style=for-the-badge&logo=javascript&logoColor=black" alt="JavaScript"/>
-  <img src="https://img.shields.io/badge/Git-F05032?style=for-the-badge&logo=git&logoColor=white" alt="Git"/>
-  <img src="https://img.shields.io/badge/GitHub-181717?style=for-the-badge&logo=github&logoColor=white" alt="GitHub"/>
-</p>
-
-| Tool | Role |
-|---|---|
-| Python | Every service: gateway, classifier, RAG, console server |
-| Apache Kafka | Streams tickets between services |
-| Ollama (`qwen2.5:3b`, `nomic-embed-text`) | Local LLM for classification and drafting, and text embeddings |
-| Qdrant | Vector database for semantic search over past resolved tickets |
-| FastAPI + Server-Sent Events | Console backend with live updates |
-| SQLite | Agent decisions and email-gateway state |
-| Docker Compose | Runs Kafka and Qdrant with one command |
-| Gmail (IMAP / SMTP) | Receiving and sending real email |
-| Cloudflare Tunnel | Secure public link to the console for phone access |
-| ntfy | Free push notifications to the phone |
-| Chart.js | Analytics charts |
-| HTML, CSS, JavaScript | The console and sign-in page, with no front-end framework |
-| Git and GitHub | Version control and hosting |
-
----
+<img src="./assets/readme/title-run.svg" width="100%" alt="05 Run it: Try it yourself.">
 
 ## Project layout
 
@@ -163,7 +33,6 @@ TriageIQ/
   .env.example              settings template (copy to .env)
 ```
 
----
 
 ## Quick start
 
@@ -212,7 +81,6 @@ It prints a secure `https://...trycloudflare.com` link. The address changes on e
 
 **Try it without email or an LLM:** `python dashboard/server.py --demo` shows the console with simulated tickets. Demo data is fake, and nothing is ever sent.
 
----
 
 ## Honest limits
 
@@ -221,7 +89,6 @@ It prints a secure `https://...trycloudflare.com` link. The address changes on e
 - The phone link depends on a laptop staying on. A production setup would deploy the services to a server.
 - It uses a small 3B-parameter local model, so it is fast and private but less accurate than a large hosted model.
 
----
 
 ## Roadmap
 
@@ -240,3 +107,7 @@ It prints a secure `https://...trycloudflare.com` link. The address changes on e
 - [ ] Measured results and a demo video in this README
 
 Measured accuracy, latency and cost per ticket will be added here once the evaluation is done.
+
+<p align="center">
+  <img src="./assets/readme/footer.svg" width="100%" alt="The AI does the first 80%. A person decides what is sent. Built by Hemashree.">
+</p>
