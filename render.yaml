@@ -1,0 +1,17 @@
+# One-click public demo on Render (free plan). In Render: New + > Blueprint > pick this repo.
+# TRIAGEIQ_HOSTED=1 means: demo mode only (simulated tickets and AI results), no .env,
+# no email, no phone alerts. The real system runs on your own machine (see the README).
+services:
+  - type: web
+    name: triageiq
+    runtime: python
+    plan: free
+    buildCommand: pip install -r requirements.txt
+    startCommand: python dashboard/server.py
+    healthCheckPath: /api/health
+    autoDeploy: true
+    envVars:
+      - key: TRIAGEIQ_HOSTED
+        value: "1"
+      - key: PYTHON_VERSION
+        value: "3.12.7"

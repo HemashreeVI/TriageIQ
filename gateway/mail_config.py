@@ -14,6 +14,8 @@ ROOT = Path(__file__).resolve().parent.parent
 
 def load_env(path=ROOT / ".env"):
     """Read KEY=VALUE lines from .env into the environment (real environment variables win)."""
+    if os.environ.get("TRIAGEIQ_HOSTED") == "1":
+        return  # the public demo never reads local secrets
     if not path.exists():
         return
     for line in path.read_text(encoding="utf-8").splitlines():

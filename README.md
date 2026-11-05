@@ -131,6 +131,12 @@ TriageIQ/
 ```
 
 
+## 🌐 Hosted demo
+
+[![Deploy to Render](https://render.com/images/deploy-to-render-button.svg)](https://render.com/deploy?repo=https://github.com/HemashreeVI/TriageIQ)
+
+`render.yaml` runs the console in demo mode with `TRIAGEIQ_HOSTED=1`: simulated tickets and AI results, no Kafka or local model needed, and it never reads `.env`, sends email or sends phone alerts. The real pipeline (IMAP, Kafka, Ollama, Qdrant) runs on your own machine, see Quick start.
+
 ## Quick start
 
 **Requirements:** Docker Desktop, Python 3.11 or newer, [Ollama](https://ollama.com), and a Gmail account made just for the support inbox (with 2-Step Verification and an [app password](https://myaccount.google.com/apppasswords)).

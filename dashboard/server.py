@@ -54,6 +54,8 @@ import auth as authmod  # noqa: E402
 BOOTSTRAP_SERVERS = "localhost:9092"
 TOPIC = "tickets.triaged"
 PORT = 8050  # 8050 so it does not clash with RootLens
+# Public demo on a web host (render.yaml): always demo mode, no .env, no alerts.
+HOSTED = os.environ.get("TRIAGEIQ_HOSTED") == "1"
 
 CATEGORIES = ["Billing", "Technical", "Delivery", "Account", "General"]
 PRIORITIES = ["High", "Medium", "Low"]
@@ -485,6 +487,8 @@ async def health(request: Request):
 
 @app.post("/api/test-push")
 async def test_push(user: str = Depends(require_user)):
+    if state["mode"] == "demo":
+        return reject("Not available in demo mode", 403)
     if not push.configured():
         return reject("Phone alerts are not set up")
     try:
@@ -748,10 +752,13 @@ if __name__ == "__main__":
     parser.add_argument("--share", action="store_true", help="open a secure public link so you can use it from your phone")
     parser.add_argument("--port", type=int, default=PORT)
     args = parser.parse_args()
+    if HOSTED:
+        args.demo, args.share = True, False
+        args.port = int(os.environ.get("PORT", PORT))
     if args.share and args.demo:
         sys.exit("--share needs the real dashboard, not --demo (demo data is fake and has no login).")
     state["mode"] = "demo" if args.demo else "live"
-    if not free_port(args.port):
+    if not HOSTED and not free_port(args.port):
         sys.exit(1)
 
     if not args.demo:
@@ -777,7 +784,7 @@ if __name__ == "__main__":
                     loop.call_soon_threadsafe(q.put_nowait, ("close", None))
             super().handle_exit(sig, frame)
 
-    config = uvicorn.Config(app, host="127.0.0.1", port=args.port, log_level="warning",
+    config = uvicorn.Config(app, host="0.0.0.0" if HOSTED else "127.0.0.1", port=args.port, log_level="warning",
                             timeout_graceful_shutdown=3)
     tunnel = start_tunnel(args.port) if args.share else None
     try:
