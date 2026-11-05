@@ -20,6 +20,103 @@
 
 <img src="./assets/readme/title-run.svg" width="100%" alt="05 Run it: Try it yourself.">
 
+## 📸 Screenshots
+
+From the console in demo mode (`python dashboard/server.py --demo`). **Demo tickets and AI results are simulated**: nothing is emailed, and the numbers are not real model accuracy.
+
+| | |
+|---|---|
+| <img src="assets/screenshots/1-overview.png" alt="Overview"> | <img src="assets/screenshots/2-approval-queue.png" alt="Approval queue"> |
+| **Overview.** How many tickets are waiting, split by priority, and how long the oldest has waited. | **Needs approval.** Each ticket shows its category, priority and mood, the customer's message and the AI's draft. |
+| <img src="assets/screenshots/3-ticket-and-draft.png" alt="Ticket and AI draft"> | <img src="assets/screenshots/4-urgent.png" alt="Urgent tickets"> |
+| **Ticket and draft.** Read it, change anything, then approve or send it to a human. Nothing is sent until you do. | **Urgent.** High-priority tickets, and the tickets the AI could not handle. |
+| <img src="assets/screenshots/5-all-tickets.png" alt="All tickets"> | <img src="assets/screenshots/6-system.png" alt="System page"> |
+| **All tickets.** Every ticket, searchable and filterable by source and status. | **System.** How a ticket travels through the pipeline, with live counters for each stage. |
+
+## 🧠 How it works
+
+<img src="assets/explainer/1-pipeline.png" alt="The event-driven pipeline" width="100%">
+
+```mermaid
+flowchart LR
+    IN[📥 Inbox] -->|IMAP| GW[gateway/inbound.py]
+    GW -->|new ticket| K1[(Kafka: tickets)]
+    K1 --> CL[classifier/consumer.py<br/>classify + RAG draft]
+    CL <-->|qwen2.5:3b, nomic-embed-text| OL[Ollama]
+    CL <-->|top 3 similar past tickets| QD[(Qdrant)]
+    CL --> K2[(Kafka: tickets.triaged)]
+    K2 --> UI[FastAPI console<br/>live over SSE]
+    UI -->|approve / edit / escalate| AG[🧑 support agent]
+    AG -->|only after approval| SM[SMTP reply<br/>same thread]
+```
+
+### Why Kafka in the middle
+
+<img src="assets/explainer/2-why-kafka.png" alt="Why Kafka" width="100%">
+
+Kafka decouples reading email from running the model. If the model is slow, tickets wait safely in the `tickets` topic instead of being lost. The consumer group `triageiq-classifier` stores its offset, so after a restart it carries on from exactly where it stopped.
+
+### Step 1: classify with a local LLM
+
+<img src="assets/explainer/3-classify.png" alt="Classify with a local LLM" width="100%">
+
+- The model is **Qwen 2.5 3B** (`qwen2.5:3b`) running locally in **Ollama**. Customer text never leaves the machine.
+- The prompt defines every category and priority, and a **JSON schema** forces exactly three fields (`category`, `priority`, `mood`), each from a fixed list.
+- **Temperature 0**, so the same email always gets the same answer.
+
+### Never trust the model blindly
+
+<img src="assets/explainer/4-safe-fallback.png" alt="Safe fallback" width="100%">
+
+If Ollama is down, times out, or returns anything outside the allowed values, the ticket is **not dropped**. It falls back to `needs_human: True` with **High** priority, so a person looks at it first. The terminal on the right is a real run with the model switched off.
+
+### Step 2: draft a reply with RAG
+
+<img src="assets/explainer/5-rag.png" alt="RAG over solved tickets" width="100%">
+
+```mermaid
+sequenceDiagram
+    participant C as consumer
+    participant O as Ollama
+    participant Q as Qdrant
+    C->>O: embed the new ticket (nomic-embed-text)
+    O-->>C: vector
+    C->>Q: 3 nearest past tickets (cosine)
+    Q-->>C: matches with similarity scores
+    alt at least one match ≥ 0.55
+        C->>O: draft a reply using only those past answers
+        O-->>C: draft + sources
+    else nothing similar enough
+        Note over C: no draft, a human writes the reply
+    end
+```
+
+- 30 past tickets and how they were solved are embedded with `nomic-embed-text` and stored in Qdrant (`rag/ingest.py`).
+- A new ticket is embedded the same way, and Qdrant returns the **top 3** by **cosine similarity**.
+- Anything below **0.55** is ignored. If nothing is similar enough, there is no draft.
+
+### Grounded replies
+
+<img src="assets/explainer/6-grounded.png" alt="Grounded replies" width="100%">
+
+The drafting prompt says: use only the facts in the past answers; never invent policies, amounts, links or time frames; if they don't fully answer the customer, say a team member will follow up. The model writes the words, but the facts come from your own history. The console shows which past tickets each draft was based on.
+
+### Step 3: a human stays in the loop
+
+<img src="assets/explainer/7-human-in-the-loop.png" alt="Human in the loop" width="100%">
+
+The console streams every ticket over **Server-Sent Events** (`/events`). The agent can **approve** the draft, **edit** it, **write their own**, or **send it to a human**. Only on approval does the reply go out over SMTP, in the same thread, using the `In-Reply-To` and `References` headers.
+
+### Hardened for a real inbox
+
+<img src="assets/explainer/8-hardening.png" alt="Hardening" width="100%">
+
+- **No duplicates:** every email's `Message-ID` is stored in SQLite, so one email is one ticket, even after restarts.
+- **No reply loops:** auto-replies (`Auto-Submitted`), bulk mail (`Precedence: bulk`), mailing lists (`List-Id`), bounces and no-reply senders are skipped.
+- **Rate limit:** one sender can create at most **5 tickets per hour** (`MAX_PER_SENDER_PER_HOUR`).
+- **Sign-in:** an HMAC-signed 14-day session cookie, and a lockout after **6 wrong passwords in 10 minutes**.
+
+
 ## Project layout
 
 ```
@@ -104,6 +201,7 @@ It prints a secure `https://...trycloudflare.com` link. The address changes on e
 - [ ] Larger, more realistic knowledge base
 - [ ] CI with GitHub Actions
 - [x] Console screenshots in this README
+- [x] How-it-works deep dive in this README
 - [ ] Measured results and a demo video in this README
 
 Measured accuracy, latency and cost per ticket will be added here once the evaluation is done.
