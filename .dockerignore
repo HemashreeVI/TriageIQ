@@ -1,0 +1,14 @@
+# never ship secrets or local data in the image
+.env
+.env.*
+!.env.example
+*.db
+dashboard/.session_secret
+.git
+.github
+.venv
+venv
+__pycache__
+*.pyc
+assets
+docs
