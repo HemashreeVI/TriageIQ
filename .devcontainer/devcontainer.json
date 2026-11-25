@@ -1,0 +1,18 @@
+// Open TriageIQ in GitHub Codespaces (or VS Code Dev Containers) with one click.
+// Runs the real pipeline without email: Kafka + Qdrant + a local LLM (Ollama, qwen2.5:3b),
+// the classifier/RAG drafter, the console, and a stream of fake support tickets.
+// First start downloads the models (~2.3 GB), so allow about 5-8 minutes.
+{
+  "name": "TriageIQ",
+  "image": "mcr.microsoft.com/devcontainers/universal:2",
+  "hostRequirements": { "cpus": 4, "memory": "16gb", "storage": "32gb" },
+  "postStartCommand": "bash .devcontainer/start.sh",
+  "forwardPorts": [8050],
+  "portsAttributes": {
+    "8050": { "label": "TriageIQ console", "onAutoForward": "openBrowser" }
+  },
+  "customizations": {
+    "codespaces": { "openFiles": ["README.md"] },
+    "vscode": { "extensions": ["ms-python.python", "ms-azuretools.vscode-docker"] }
+  }
+}

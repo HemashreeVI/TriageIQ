@@ -6,6 +6,27 @@
   <img src="https://img.shields.io/badge/Python-F4A73B?style=for-the-badge" alt="Python"> <img src="https://img.shields.io/badge/Kafka-F4A73B?style=for-the-badge" alt="Kafka"> <img src="https://img.shields.io/badge/Ollama-F4A73B?style=for-the-badge" alt="Ollama"> <img src="https://img.shields.io/badge/Qdrant-F4A73B?style=for-the-badge" alt="Qdrant"> <img src="https://img.shields.io/badge/FastAPI-F4A73B?style=for-the-badge" alt="FastAPI"> <img src="https://img.shields.io/badge/Docker-F4A73B?style=for-the-badge" alt="Docker">
 </p>
 
+<h3 align="center">▶ Try it in one click</h3>
+
+<p align="center">
+  <a href="https://codespaces.new/HemashreeVI/TriageIQ?quickstart=1"><img src="https://github.com/codespaces/badge.svg" alt="Open in GitHub Codespaces"></a>
+  &nbsp;
+  <a href="https://render.com/deploy?repo=https://github.com/HemashreeVI/TriageIQ"><img src="https://render.com/images/deploy-to-render-button.svg" alt="Deploy to Render"></a>
+</p>
+
+<p align="center"><sub><b>Codespaces:</b> the real pipeline runs in your browser with no email account: Kafka, Qdrant, a local LLM (Ollama, qwen2.5:3b), the classifier and RAG drafter, and 20 fake support tickets streaming in. The console opens on port 8050 and the terminal prints its login. First start downloads the models (about 2.3 GB), so allow 5–8 minutes.</sub></p>
+
+<details>
+<summary><b>🐳 Or open the demo console on your laptop with one Docker command</b></summary>
+
+```bash
+docker run --rm -p 8050:8050 ghcr.io/hemashreevi/triageiq:latest
+```
+
+Open http://localhost:8050. This is the console in demo mode: simulated tickets and AI results, no email, no model, nothing is ever sent. For the real pipeline, use Codespaces or the Quick start below.
+
+</details>
+
 <img src="./assets/readme/title-features.svg" width="100%" alt="01 Features: What it does.">
 <img src="./assets/readme/features.svg" width="100%" alt="TriageIQ features">
 
